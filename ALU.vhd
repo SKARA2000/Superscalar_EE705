@@ -25,7 +25,7 @@ architecture kung of adder_8 is
 	signal carry_block_third_lvl: carry_third_lvl; -- stores third level (pi[2i,2i+1], gi[2i,2i+1])
 	signal carry_block_fourth_lvl: carry_fourth_lvl; -- stores third level (pi[2i,2i+1], gi[2i,2i+1])
 begin
-	process(input1, input2)
+	process(input1, input2, carryin)
 	begin
 		for i in 1 to 7 loop
 			sig_g_p(i) <= (input1(i) xor input2(i)) & (input1(i) and input2(i));
