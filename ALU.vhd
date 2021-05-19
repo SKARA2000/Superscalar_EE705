@@ -151,20 +151,27 @@ end architecture;
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use work.PKG_COMMON.all;
 
 entity ALU is
 	port(
 		inp1: in std_logic_vector(31 downto 0);
 		inp2: in std_logic_vector(31 downto 0);
 		shift_amt: in std_logic_vector(4 downto 0);
+		ALU_instr_control: in std_logic;
 		logic_control: in std_logic_vector(1 downto 0);
 		shift_control: in std_logic_vector(1 downto 0);
-		alu_outp_control: in std_logic_vector(1 downto 0);
+		alu_outp_control: in std_logic_vector(2 downto 0);
 		add_sub: in std_logic;
 		outp: out std_logic_vector(31 downto 0);
 		ovfl: out std_logic;
 		carr_ovfl: out std_logic;
-		zero: out std_logic
+		zero: out std_logic;
+		Valid: out std_logic;
+		location_inp: in std_logic_vector(N_LOG_ROB - 1 downto 0);
+		RR_inp: in std_logic_vector(N_LOG_RR - 1 downto 0);
+		location: out std_logic_vector(N_LOG_ROB - 1 downto 0);
+		RR: out std_logic_vector(N_LOG_RR - 1 downto 0)
 	);
 end entity ALU;
 
@@ -178,12 +185,18 @@ architecture dataflow of ALU is
 		ovfl: out std_logic
 		);
 	end component;
-	signal add_inp2, add_outp, logic_outp, shift_outp, slt_outp: std_logic_vector(31 downto 0);
+	signal add_inp2, add_outp, logic_outp, shift_outp, slt_outp, mult_outp, div_outp: std_logic_vector(31 downto 0);
 begin
+	Valid <= ALU_instr_control;
+	RR <= RR_inp;
+	location <= location_inp;
 	add_inp2 <= inp2 when (add_sub = '1') else (inp2 xor "11111111111111111111111111111111");	-- 2's complemetn for subtraction if necessary
 	Adder: adder_32 port map(inp1, add_inp2, add_sub, add_outp, carr_ovfl);						-- Adder instantiation, Carry flag is set when adder has a global carry
 	
 	slt_outp <= std_logic_vector(to_unsigned(1, add_outp'length)) when (add_outp(31) = '1') else std_logic_vector(to_unsigned(0, add_outp'length));
+	mult_outp <= std_logic_vector(to_unsigned(to_integer(unsigned(inp1)) * to_integer(unsigned(inp2)),32));
+	--div_outp <= std_logic_vector(to_unsigned(to_integer(unsigned(inp1)) / to_integer(unsigned(inp2)),32));
+	div_outp <= (others => '0');
 	
 	with logic_control select logic_outp <=
 		inp1 and inp2 when "00", 		-- and logic
@@ -198,13 +211,15 @@ begin
 		std_logic_vector(shift_right(unsigned(inp2), to_integer(unsigned(shift_amt)))) when "11", 		-- right shift logical
 		(others => '0') when others;																	-- default output
 	
+	
 	with alu_outp_control select outp <= 
-		shift_outp when "00",			-- shift instruction
-		slt_outp when "01",				-- slt instruction
-		add_outp when "10",				-- add instruction
-		logic_outp when "11",			-- logic instruction
+		shift_outp when "000",			-- shift instruction
+		slt_outp when "001",				-- slt instruction
+		add_outp when "010",				-- add instruction
+		logic_outp when "011",			-- logic instruction
+		mult_outp when "100", 			-- Mult instruction
+		div_outp when "101"	,			-- Division instruction
 		(others => '0') when others;	-- default output
-		
 	ovfl <= (inp1(31) and add_inp2(31) and (not add_outp(31))) or ((not inp1(31)) and (not add_inp2(31)) and add_outp(31));	-- Overflow Flag set when adder output is wrong
 	zero <= '1' when (add_outp = "00000000000000000000000000000000") else '0';												-- Zero flag is set when adder output is zero
 	

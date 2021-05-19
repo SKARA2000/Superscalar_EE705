@@ -1,0 +1,64 @@
+# Current time Wed May 12 19:36:21 2021
+# ModelSim - Intel FPGA Edition Stack Trace
+# Program = vish
+# Id = "2020.1"
+# Version = "2020.02"
+# Date = "Feb 28 2020"
+# Platform = win32pe
+
+Exception c0000005 has occurred at address 775e0eee. Traceback:
+# 0    0x775e0eee: 'TkSetFocusWin + 0x29e'
+# 1    0x77594bf0: 'Tk_SetGrid + 0x2190'
+# 2    0x77598872: 'Tk_SetGrid + 0x5e12'
+# 3    0x749039f1: 'TclNREvalObjv + 0x3e1'
+StackWalk failed 299
+# End of Stack Trace
+
+# Current time Wed May 12 20:31:40 2021
+# ModelSim - Intel FPGA Edition Stack Trace
+# Program = vish
+# Id = "2020.1"
+# Version = "2020.02"
+# Date = "Feb 28 2020"
+# Platform = win32pe
+
+Exception c0000005 has occurred at address 74960eee. Traceback:
+# 0    0x74960eee: 'TkSetFocusWin + 0x29e'
+# 1    0x74914bf0: 'Tk_SetGrid + 0x2190'
+# 2    0x74918872: 'Tk_SetGrid + 0x5e12'
+# 3    0x74a839f1: 'TclNREvalObjv + 0x3e1'
+StackWalk failed 299
+# End of Stack Trace
+
+# Current time Wed May 12 20:52:47 2021
+# ModelSim - Intel FPGA Edition Stack Trace
+# Program = vish
+# Id = "2020.1"
+# Version = "2020.02"
+# Date = "Feb 28 2020"
+# Platform = win32pe
+
+Exception c0000005 has occurred at address 74ab0eee. Traceback:
+# 0    0x74ab0eee: 'TkSetFocusWin + 0x29e'
+# 1    0x74a64bf0: 'Tk_SetGrid + 0x2190'
+# 2    0x74a68872: 'Tk_SetGrid + 0x5e12'
+# 3    0x749039f1: 'TclNREvalObjv + 0x3e1'
+StackWalk failed 299
+# End of Stack Trace
+
+# Current time Mon May 17 17:46:43 2021
+# ModelSim - Intel FPGA Edition Stack Trace
+# Program = vish
+# Id = "2020.1"
+# Version = "2020.02"
+# Date = "Feb 28 2020"
+# Platform = win32pe
+
+Exception c0000005 has occurred at address 74340eee. Traceback:
+# 0    0x74340eee: 'TkSetFocusWin + 0x29e'
+# 1    0x742f4bf0: 'Tk_SetGrid + 0x2190'
+# 2    0x742f8872: 'Tk_SetGrid + 0x5e12'
+# 3    0x53b839f1: 'TclNREvalObjv + 0x3e1'
+StackWalk failed 299
+# End of Stack Trace
+
