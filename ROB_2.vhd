@@ -31,6 +31,7 @@ entity ROB is
 		--Outputs to dispatch stage
 		O_ROB_FREE_LOC1, O_ROB_FREE_LOC2: out std_logic_vector(N_LOG_ROB - 1 downto 0);
 		O_ROB_REG_WR1, O_ROB_REG_WR2: out std_logic;
+		O_ROB_REG_FLUSH1, O_ROB_REG_FLUSH2: out std_logic;
 		O_ROB_RNME_REG1, O_ROB_RNME_REG2: out std_logic_vector(N_LOG_RR - 1 downto 0);
 		O_ROB_ARCH_REG1, O_ROB_ARCH_REG2: out std_logic_vector(N_LOG_AR - 1 downto 0);
 		
@@ -51,7 +52,7 @@ entity ROB is
 		O_head: out std_logic_vector(N_LOG_ROB - 1 downto 0);
 		O_last: out std_logic_vector(N_LOG_ROB - 1 downto 0);
 		O_BRTAG: out ROB_BrTAG_COLUMN;
-		O_FLUSH, O_SPEC, O_VALID: out std_logic_vector(0 to 2**N_LOG_ROB - 1)
+		O_FLUSH, O_SPEC, O_VALID: out std_logic_vector(2**N_LOG_ROB - 1 downto 0)
 	);
 end entity;
 
@@ -76,7 +77,7 @@ begin
 		-- ROB internal table structure
 		variable PC: ROB_PC_COLUMN;
 		variable LOC: ROB_LOC_COLUMN;
-		variable VALID, BUSY, SPEC, FLUSH, SW, RWRITE, BrINST: std_logic_vector(0 to 2**N_LOG_ROB - 1);
+		variable VALID, BUSY, SPEC, FLUSH, SW, RWRITE, BrINST: std_logic_vector(2**N_LOG_ROB - 1 downto 0);
 		variable LOC_Buff: ROB_BrTAG_COLUMN;
 		
 		--signal I1_EXC, I2_EXC: ROB_BIT_COLUMN;
@@ -132,6 +133,8 @@ begin
 			
 			O_ROB_REG_WR1 <= '0';
 			O_ROB_REG_WR2 <= '0';
+			O_ROB_REG_FLUSH1 <= '0';
+			O_ROB_REG_FLUSH2 <= '0';
 			
 			O_STORE_COMMIT <= '0';
 			O_LOC_BUFF <= (others => '0');
@@ -256,7 +259,7 @@ begin
 				-- with tags greater than the corresponding branch tag
 				if(temp_opr_br(0) = '0')  then
 					for j in 0 to (2**N_LOG_ROB - 1) loop
-						if(temp_brTag >= unsigned(temp_opr_br(4 downto 1))) then
+						if(to_integer(temp_brTag) = to_integer(unsigned(temp_opr_br(4 downto 1)))) then
 							FLUSH(j) := '1';
 						end if;
 					end loop;
@@ -288,17 +291,18 @@ begin
 	
 			new_head := unsigned(head);
 			--Pass over instrtuctions to be flushed and get the new head pointer
-			for i in 0 to (2**N_LOG_ROB - 1) loop
-				if(FLUSH(to_integer(new_head)) = '0') or (new_head = unsigned(last)) then
-					exit;
-				end if;
-				new_head := new_head + 1;
-				rob_count := rob_count - 1;
-			end loop;
+			-- for i in 0 to (2**N_LOG_ROB - 1) loop
+				-- if(FLUSH(to_integer(new_head)) = '0') or (new_head = unsigned(last)) then
+					-- exit;
+				-- end if;
+				-- new_head := new_head + 1;
+				-- rob_count := rob_count - 1;
+			-- end loop;
 			--Start operating using this new head pointer
 			--If head instruction is valid, not busy and speculative,
 			--then commit it
-			if((VALID(to_integer(new_head)) = '1') and (BUSY(to_integer(new_head)) = '0') and (SPEC(to_integer(new_head)) = '0')) then
+			if ((((VALID(to_integer(new_head)) = '1') and (BUSY(to_integer(new_head)) = '0') and (SPEC(to_integer(new_head)) = '0')) 
+							or (FLUSH(to_integer(new_head)) = '1'))) and (new_head < unsigned(last)) then
 				if(SW(to_integer(new_head)) = '1') then
 					STORE_COMMIT := '1';
 					StoreLocationBuffer := LOC_Buff(to_integer(new_head));
@@ -308,8 +312,10 @@ begin
 				end if;
 				if(RWRITE(to_integer(new_head)) = '1') then
 					WR1 := '1';
+					O_ROB_REG_FLUSH1 <= FLUSH(to_integer(new_head));
 				else
 					WR1 := '0';
+					O_ROB_REG_FLUSH1 <= '0';
 				end if;			
 				ARCH_REG1 := ARCH_REG(to_integer(new_head));
 				RNME_REG1 := RNME_REG(to_integer(new_head));
@@ -317,7 +323,8 @@ begin
 				new_head := new_head + 1;
 				rob_count := rob_count - 1;
 				-- Do the same for the next instruction
-				if((VALID(to_integer(new_head)) = '1') and (BUSY(to_integer(new_head)) = '0') and (SPEC(to_integer(new_head)) = '0')) then
+				if ((((VALID(to_integer(new_head)) = '1') and (BUSY(to_integer(new_head)) = '0') and (SPEC(to_integer(new_head)) = '0')) 
+								or (FLUSH(to_integer(new_head)) = '1') )) and (new_head < unsigned(last)) then
 					if(SW(to_integer(new_head)) = '1') then
 						STORE_COMMIT := '1';
 						StoreLocationBuffer := LOC_Buff(to_integer(new_head));
@@ -327,8 +334,10 @@ begin
 					end if;
 					if(RWRITE(to_integer(new_head)) = '1') then
 						WR2 := '1';
+						O_ROB_REG_FLUSH2 <= FLUSH(to_integer(new_head));
 					else
 						WR2 := '0';
+						O_ROB_REG_FLUSH2 <= '0';
 					end if;
 					ARCH_REG2 := ARCH_REG(to_integer(new_head));
 					RNME_REG2 := RNME_REG(to_integer(new_head));
@@ -338,6 +347,7 @@ begin
 				-- This means that the second instruction is not valid
 				else
 					WR2 := '0';
+					O_ROB_REG_FLUSH2 <= '0';					
 					ARCH_REG2 := ARCH_REG(to_integer(new_head));
 					RNME_REG2 := RNME_REG(to_integer(new_head));
 				end if;
@@ -346,6 +356,8 @@ begin
 				WR1 := '0';
 				WR2 := '0';
 				STORE_COMMIT := '0';
+				O_ROB_REG_FLUSH1 <= '0';					
+				O_ROB_REG_FLUSH2 <= '0';					
 				StoreLocationBuffer := (others => '0');
 				ARCH_REG1 := ARCH_REG(to_integer(new_head));
 				RNME_REG1 := RNME_REG(to_integer(new_head));

@@ -34,7 +34,7 @@ begin
 		variable spec_bit: std_logic;
 	begin
 		if rising_edge(CLK) then
-			if(I_CTRL_BITS(23) = '1') and (I_CTRL_BITS(3 downto 2) = "11") and (I_VALID = '1')then
+			if(I_CTRL_BITS(23) = '1') and (I_CTRL_BITS(3 downto 2) = "01") and (I_VALID = '1')then
 				if((unsigned(I_OPR1) = unsigned(I_OPR2)) xor (I_PREDICTION = '0')) then
 					spec_bit := '1';
 				else 
@@ -42,7 +42,7 @@ begin
 				end if;
 				O_VAL_EXEC <= '1';
 				O_TAG_EXEC <= (I_BrTAG & spec_bit);
-			elsif(I_CTRL_BITS(23) = '1') and (I_CTRL_BITS(3 downto 2) = "01") and (I_VALID = '1') then
+			elsif(I_CTRL_BITS(23) = '1') and (I_CTRL_BITS(3 downto 2) = "11") and (I_VALID = '1') then
 				if((signed(I_OPR1) < 0) xor (I_PREDICTION = '0')) then
 					spec_bit := '1';
 				else 

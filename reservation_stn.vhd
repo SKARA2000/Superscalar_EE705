@@ -292,6 +292,9 @@ port (
 			TAG_FWD_SLOT1, TAG_FWD_SLOT2, TAG_FWD_SLOT3, TAG_FWD_SLOT4 : in std_logic_vector(N_TAG_BITS-1 downto 0);  
 			VAL_FWD_SLOTS : in std_logic_vector(3 downto 0);
 			
+			-- From ROB --
+			I_ROB_FLUSH, I_ROB_SPEC : in std_logic_vector(127 downto 0);
+			
 			-- Outputs
 			DREG_OPR1, DREG_OPR2, DREG_OPR3 : out std_logic_vector(31 downto 0);
 			DREG_CTRL 				: out std_logic_vector(N_CTRL_BITS-1 downto 0); 	
@@ -463,6 +466,7 @@ signal INSTR_NEXT : std_logic_vector(N_OPCODE_BITS+N_SHAMT_BITS+N_FUNC_BITS-1 do
 signal INSTR_ROB_LOC_NEXT : std_logic_vector(N_LOG_ROB-1 downto 0);
 signal INSTR_BR_FIELD_NEXT   : std_logic_vector(N_BR_BITS_FOR_RS-1 downto 0) ;
 signal INSTR_OPR3_NEXT : std_logic_vector(31 downto 0);
+signal TBL_FLUSH_NEXT, TBL_ISPEC_NEXT : std_logic_vector(N_ENTRIES_FPU_RS-1 downto 0);
 
 begin
 
@@ -638,7 +642,8 @@ begin
 	
 	-- DISPATCH SELECTION --
 	g40: for j in 0 to N_ENTRIES_FPU_RS-1 generate
-		IS_READY_AT_CLK(j) <= '1' when ( (TBL_READY(j) = '1' or TBL_READY_NEXT(j) = '1') and TBL_BUSY(j) = '1' ) else '0' ;
+		IS_READY_AT_CLK(j) <= '1' when ( (TBL_READY(j) = '1' or TBL_READY_NEXT(j) = '1') and TBL_BUSY(j) = '1' 
+													and TBL_BR_FIELD(j)(9) = '0' and TBL_FLUSH_NEXT(j) = '0' ) else '0' ;
 	end generate;
 	
 	-- 8 LEVEL 1 ENCODERS : Selects the location of ready instruction for each bit of Instruction Sequnece
@@ -653,6 +658,7 @@ begin
 		
 	end generate;
 
+	
 	-- 1 LEVEL 2 ENCODER : Selects the least significant bit which is 1
 
 		INP_ENC_LEVEL2 <= TBL_LOC_B0_VAL ; 
@@ -670,10 +676,10 @@ begin
 	INSTR_RDY_DS2 <= '1' when (DS2_INSTR_RDY_NEXT = '1' and LSB_BIT_VALID = '0') else '0' ;
 	INSTR_RDY_DS3 <= '1' when (DS3_INSTR_RDY_NEXT = '1' and LSB_BIT_VALID = '0') else '0' ;
 	
-	INSTR_NEXT_ROW <= INSTR_NEXT_ROW_FROM_TBL when LSB_BIT_VALID = '1' else
-							RS_ALLOC_LOC(0) when INSTR_RDY_DS1 = '1' else
-							RS_ALLOC_LOC(1) when INSTR_RDY_DS2 = '1' else
-							RS_ALLOC_LOC(2) when INSTR_RDY_DS3 = '1' else
+	INSTR_NEXT_ROW <= INSTR_NEXT_ROW_FROM_TBL when ( LSB_BIT_VALID = '1' ) else
+--							RS_ALLOC_LOC(0) when ( INSTR_RDY_DS1 = '1' and  DS1_SPEC_BrTAG_PRED(9) = '0') else
+--							RS_ALLOC_LOC(1) when ( INSTR_RDY_DS2 = '1' and  DS2_SPEC_BrTAG_PRED(9) = '0') else
+--							RS_ALLOC_LOC(2) when ( INSTR_RDY_DS3 = '1' and  DS3_SPEC_BrTAG_PRED(9) = '0') else
 							(others => '0') ;
 							
 	INSTR_NEXT 		<= TBL_INSTR(to_integer(unsigned(INSTR_NEXT_ROW_FROM_TBL(N_LOC_BITS -1 downto 0)))) when (LSB_BIT_VALID = '1') else
@@ -727,6 +733,19 @@ begin
 	
 	-- END OF DISPATCH SELECTION --	
 
+	-- RS FLUSH BASED ON SPECULATION --
+	g60: for j in 0 to N_ENTRIES_FPU_RS-1 generate
+		TBL_FLUSH_NEXT(j) <= '1' when ( I_ROB_FLUSH(to_integer(unsigned(TBL_ROB_LOC(j)))) = '1' and TBL_BUSY(j) = '1' ) else '0' ;
+	end generate;
+
+	-- RS MAKE NON SPECULATIVE --
+	g61: for j in 0 to N_ENTRIES_FPU_RS-1 generate
+		TBL_ISPEC_NEXT(j) <= '0' when ( I_ROB_FLUSH(to_integer(unsigned(TBL_ROB_LOC(j)))) = '0'  and 
+												  I_ROB_SPEC(to_integer(unsigned(TBL_ROB_LOC(j)))) = '0' and 
+												  TBL_BUSY(j) = '1' ) else TBL_BR_FIELD(j)(9) ;
+	end generate;
+	
+	
 	-- SHIFTING INSTRUCTION SEQUENCE FOR NEXT CYCLE --
 	INST_VALID <=	INSTR_NEXT_ROW(N_LOC_BITS) ;
 	
@@ -790,6 +809,7 @@ begin
 			TBL_READY <= std_logic_vector(to_unsigned(0, N_ENTRIES_FPU_RS));
 			TBL_O1VL <= std_logic_vector(to_unsigned(0, N_ENTRIES_FPU_RS));
 			TBL_O2VL <= std_logic_vector(to_unsigned(0, N_ENTRIES_FPU_RS));
+			TBL_ROB_LOC <= (others => (others => '0'));
 			TBL_ISEQ <= (others => (others => '0'));
 			v_iseq := (others => (others => '0'));
 		elsif rising_edge(clk) then
@@ -810,7 +830,23 @@ begin
 					TBL_READY(j) <= TBL_READY_NEXT(j);
 				end if;
 			end loop;	
-
+		
+			n_instr1 := unsigned(N3) ;
+			
+			for j in 0 to N_ENTRIES_FPU_RS-1 loop
+				if (TBL_FLUSH_NEXT(j) = '1') then
+					TBL_READY(j) <= '0';
+					
+					if (TBL_BUSY(j) = '1') then
+						n_instr1 := n_instr1 - to_unsigned(1,N_LOC_BITS+1) ;
+					end if;
+					
+					TBL_BUSY(j) <= '0';
+				end if;
+				
+				TBL_BR_FIELD(j)(9) <= TBL_ISPEC_NEXT(j) ;
+			end loop;
+			
 			-- Update Table for new instructions
 			if (RS_ALLOC_LOC(0)(N_LOC_BITS) = '1') then
 			
@@ -888,32 +924,43 @@ begin
 					v_iseq(iloc) := I3_SEQ;
 			end if;
 			
+			RS_OUTPUT_VALID <= '0' ;
+			
 			if (INST_VALID = '1') then
-				TBL_BUSY(to_integer(unsigned(INSTR_NEXT_ROW(N_LOC_BITS-1 downto 0)))) <= '0';
-				TBL_READY(to_integer(unsigned(INSTR_NEXT_ROW(N_LOC_BITS-1 downto 0)))) <= '0';
 				
-				DREG_OPR1  		<= INSTR_OPR1_NEXT;
-				DREG_OPR2  		<= INSTR_OPR2_NEXT;
-				DREG_OPR3      <= INSTR_OPR3_NEXT;
+				iloc := to_integer(unsigned(INSTR_NEXT_ROW(N_LOC_BITS-1 downto 0)));
 				
-				DREG_INSTR 		<= INSTR_NEXT ;
-				DREG_DEST  		<= INSTR_DEST_NEXT ;
-				DREG_CTRL  		<= INSTR_CTRL_NEXT;
-				DREG_ROB_LOC 	<= INSTR_ROB_LOC_NEXT;
-				DREG_BR_FIELD	<= INSTR_BR_FIELD_NEXT;
-				
-				for i in 0 to N_ENTRIES_FPU_RS-1 loop
-					TBL_ISEQ(i) <= ISEQ_NEXT(i);
-				end loop;
-				
-				TBL_ISEQ(to_integer(unsigned(INSTR_NEXT_ROW(N_LOC_BITS-1 downto 0)))) <= (others => '0');
-				N_INSTR_IN_STN <= std_logic_vector(unsigned(N3) - to_unsigned(1, N_LOC_BITS+1));
+				if ( TBL_FLUSH_NEXT(iloc) = '0' and TBL_ISPEC_NEXT(iloc) = '0' ) then
+					TBL_BUSY(to_integer(unsigned(INSTR_NEXT_ROW(N_LOC_BITS-1 downto 0)))) <= '0';
+					TBL_READY(to_integer(unsigned(INSTR_NEXT_ROW(N_LOC_BITS-1 downto 0)))) <= '0';
+					
+					DREG_OPR1  		<= INSTR_OPR1_NEXT;
+					DREG_OPR2  		<= INSTR_OPR2_NEXT;
+					DREG_OPR3      <= INSTR_OPR3_NEXT;
+					
+					DREG_INSTR 		<= INSTR_NEXT ;
+					DREG_DEST  		<= INSTR_DEST_NEXT ;
+					DREG_CTRL  		<= INSTR_CTRL_NEXT;
+					DREG_ROB_LOC 	<= INSTR_ROB_LOC_NEXT;
+					DREG_BR_FIELD	<= INSTR_BR_FIELD_NEXT;
+					
+					for i in 0 to N_ENTRIES_FPU_RS-1 loop
+						TBL_ISEQ(i) <= ISEQ_NEXT(i);
+					end loop;
+					
+					TBL_ISEQ(to_integer(unsigned(INSTR_NEXT_ROW(N_LOC_BITS-1 downto 0)))) <= (others => '0');
+					N_INSTR_IN_STN <= std_logic_vector(n_instr1 - to_unsigned(1, N_LOC_BITS+1));
+					
+					RS_OUTPUT_VALID <= '1';
+				else
+					N_INSTR_IN_STN <= std_logic_vector(n_instr1);
+				end if;
 			else
-				N_INSTR_IN_STN <= N3;
+				N_INSTR_IN_STN <= std_logic_vector(n_instr1);
 			end if;
 		
 
-			RS_OUTPUT_VALID <= INST_VALID;
+
 		end if;
 		
 

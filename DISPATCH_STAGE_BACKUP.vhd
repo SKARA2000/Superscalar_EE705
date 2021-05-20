@@ -87,8 +87,6 @@ entity DISPATCH_STAGE is
 			 I_ROB_BR_VAL, I_BR_RES : in std_logic ;
 			 I_ROB_BR_TAG : in std_logic_vector(3 downto 0);
 			 
-			 -- Flush, Spec bits from ROB
-			 I_ROB_FLUSH1, I_ROB_FLUSH2 : in std_logic;
 			 
 			 -- COMMON OUTPUTS TO RESERVATION STATION --
 			 O_DS_ALL_IMM_OPR1, O_DS_ALL_IMM_OPR2 : out std_logic_vector(31 downto 0);
@@ -275,11 +273,7 @@ signal BR_TAG_I1, BR_TAG_I2 : std_logic_vector(3 downto 0);
 signal I1_BR_FIELD_NEXT, I2_BR_FIELD_NEXT : std_logic_vector(N_BR_BITS_FOR_RS-1 downto 0);
 signal I1_SPEC_BIT, I2_SPEC_BIT : std_logic ;
 signal I1_VAL_NEXT, I2_VAL_NEXT : std_logic ;
-
-type T_ARR8_SLV5 is array(0 to 7) of std_logic_vector(4 downto 0) ;
-type T_ARR32_ARR8_SLV5 is array(0 to 31) of T_ARR8_SLV5;
-type T_ARR32_SLV3 is array(0 to 31) of std_logic_vector(2 downto 0);
-	
+		   
 component ENCODER32x5 is
 	port (	INPUT : in std_logic_vector(31 downto 0) ;
 				VALID : out std_logic ;	
@@ -576,91 +570,47 @@ begin
 		
 		-- REG FILE UPDATE --
 		process(CLK, RST)
-		variable V_ARF_QUEUE : T_ARR32_ARR8_SLV5 	:= (others => (others => (others => '0')));  
-		variable V_ARF_HEAD, V_ARF_TAIL : T_ARR32_SLV3 := (others => (others => '0')); 
-		
 		begin
 			if (RST = '1') then
 				ARCH_REG_FILE <= (others => (others => '0')) ;
 				ARCH_REG_LOCK <= (others => '0');
 				ARCH_REG_TAG  <= (others => (others => '0'));
 				
-				ARCH_REG_FILE(0) <= 	X"00000000";	--0
-			   ARCH_REG_FILE(1) <= 	X"3F800000";	--1
-			   ARCH_REG_FILE(2) <=  X"40000000";	--2 
-			   ARCH_REG_FILE(3) <=  X"40400000";	--3
+				ARCH_REG_FILE(0) <=  X"00000000";	--0
+			    ARCH_REG_FILE(1) <=  X"3F800000";	--1
+			    ARCH_REG_FILE(2) <=  X"40000000";	--2 
+			    ARCH_REG_FILE(3) <=  X"40400000";	--3
 				ARCH_REG_FILE(4) <=  X"40800000";	--4
 				ARCH_REG_FILE(5) <=  X"40A00000";	--5
 				ARCH_REG_FILE(6) <=  X"40C00000";	--6
 				ARCH_REG_FILE(7) <=  X"40E00000";	--7
 				ARCH_REG_FILE(8) <=  X"41000000";	--8
-			   ARCH_REG_FILE(9) <=  X"41100000";	--9
-
+			    ARCH_REG_FILE(9) <=  X"41100000";	--9
 
 			elsif rising_edge(CLK) then
 				if ( I1_VAL_NEXT = '1' and REG_WRITE_I1	= '1' and FREE_REG1_VAL = '1') then
 					ARCH_REG_TAG(to_integer(unsigned(I_I1_DEST))) <= RNME_REG1 ;
 					ARCH_REG_LOCK(to_integer(unsigned(I_I1_DEST))) <= '1' ;
-					
-					V_ARF_QUEUE(to_integer(unsigned(I_I1_DEST)))(to_integer(unsigned(V_ARF_TAIL(to_integer(unsigned(I_I2_DEST)))))) := RNME_REG1 ;
-					V_ARF_TAIL(to_integer(unsigned(I_I1_DEST))) := std_logic_vector( unsigned(V_ARF_TAIL(to_integer(unsigned(I_I1_DEST)))) + to_unsigned(1,3));
-					
 				end if;
 
 				if ( I2_VAL_NEXT = '1' and REG_WRITE_I2	= '1' and FREE_REG2_VAL = '1') then
 					ARCH_REG_TAG(to_integer(unsigned(I_I2_DEST))) <= RNME_REG2 ;
 					ARCH_REG_LOCK(to_integer(unsigned(I_I2_DEST))) <= '1' ;
-					
-					V_ARF_QUEUE(to_integer(unsigned(I_I2_DEST)))(to_integer(unsigned(V_ARF_TAIL(to_integer(unsigned(I_I2_DEST)))))) := RNME_REG2 ;
-					V_ARF_TAIL(to_integer(unsigned(I_I2_DEST))) := std_logic_vector( unsigned(V_ARF_TAIL(to_integer(unsigned(I_I2_DEST)))) + to_unsigned(1,3));
-					
 				end if;
 				
-				if (I_ROB_FLUSH1 = '1') then
-					V_ARF_HEAD(to_integer(unsigned(I_ROB_ARCH_REG1))) := std_logic_vector( unsigned(V_ARF_HEAD(to_integer(unsigned(I_ROB_ARCH_REG1)))) + to_unsigned(1,3));					
-					
-					if ( V_ARF_HEAD(to_integer(unsigned(I_ROB_ARCH_REG1))) = V_ARF_TAIL(to_integer(unsigned(I_ROB_ARCH_REG1)))) then
-						ARCH_REG_LOCK(to_integer(unsigned(I_ROB_ARCH_REG1))) <= '0' ;
-					end if;
-				elsif ( WR_ARF_VAL1 = '1' and I_ROB_FLUSH1 = '0' ) then	
+				if ( WR_ARF_VAL1 = '1' ) then
 					ARCH_REG_FILE(to_integer(unsigned(I_ROB_ARCH_REG1))) <= WR_ARF_DATA1 ;
-					
 					if ( NO_PEND_WRITE1 = '1') then 
 						ARCH_REG_LOCK(to_integer(unsigned(I_ROB_ARCH_REG1))) <= '0' ;
 					end if;	
-					
-					V_ARF_HEAD(to_integer(unsigned(I_ROB_ARCH_REG1))) := std_logic_vector( unsigned(V_ARF_HEAD(to_integer(unsigned(I_ROB_ARCH_REG1)))) + to_unsigned(1,3));					
 				end if;
-				
-				if (I_ROB_FLUSH2 = '1') then
-					V_ARF_HEAD(to_integer(unsigned(I_ROB_ARCH_REG2))) := std_logic_vector( unsigned(V_ARF_HEAD(to_integer(unsigned(I_ROB_ARCH_REG2)))) + to_unsigned(1,3));					
-					
-					if ( V_ARF_HEAD(to_integer(unsigned(I_ROB_ARCH_REG2))) = V_ARF_TAIL(to_integer(unsigned(I_ROB_ARCH_REG2)))) then
-						ARCH_REG_LOCK(to_integer(unsigned(I_ROB_ARCH_REG2))) <= '0' ;
-					end if;			
-					
-				elsif ( WR_ARF_VAL2 = '1' and I_ROB_FLUSH2 = '0' ) then
+
+				if ( WR_ARF_VAL2 = '1' ) then
 					ARCH_REG_FILE(to_integer(unsigned(I_ROB_ARCH_REG2))) <= WR_ARF_DATA2 ;
 					if ( NO_PEND_WRITE2 = '1') then 
 						ARCH_REG_LOCK(to_integer(unsigned(I_ROB_ARCH_REG2))) <= '0' ;
 					end if;	
-					V_ARF_HEAD(to_integer(unsigned(I_ROB_ARCH_REG2))) := std_logic_vector( unsigned(V_ARF_HEAD(to_integer(unsigned(I_ROB_ARCH_REG2)))) + to_unsigned(1,3));					
 				end if;
-				
-				
---				if ( WR_ARF_VAL1 = '1' and I_ROB_FLUSH1 = '0' ) then
---					ARCH_REG_FILE(to_integer(unsigned(I_ROB_ARCH_REG1))) <= WR_ARF_DATA1 ;
---					if ( NO_PEND_WRITE1 = '1') then 
---						ARCH_REG_LOCK(to_integer(unsigned(I_ROB_ARCH_REG1))) <= '0' ;
---					end if;	
---				end if;
-
---				if ( WR_ARF_VAL2 = '1' and I_ROB_FLUSH2 = '0' ) then
---					ARCH_REG_FILE(to_integer(unsigned(I_ROB_ARCH_REG2))) <= WR_ARF_DATA2 ;
---					if ( NO_PEND_WRITE2 = '1') then 
---						ARCH_REG_LOCK(to_integer(unsigned(I_ROB_ARCH_REG2))) <= '0' ;
---					end if;	
---				end if;
 				
 			end if;	
 			
@@ -736,8 +686,8 @@ begin
 		S_FREE_REG2   <= S_FREE_REG_L2(to_integer(unsigned(S_FREE_REG1)));
 		FREE_REG2_VAL <= '0' when FREE_REG1_VAL = '0' else ENC_L2_VAL(to_integer(unsigned(S_FREE_REG1)));
 		
-		FREE_RNME_REG1 <= (I_ROB_REG_WR1 and RNME_REG_VALID(to_integer(unsigned(I_ROB_RNME_REG1)))) or I_ROB_FLUSH1;
-		FREE_RNME_REG2 <= (I_ROB_REG_WR2 and RNME_REG_VALID(to_integer(unsigned(I_ROB_RNME_REG2)))) or I_ROB_FLUSH2;
+		FREE_RNME_REG1 <= I_ROB_REG_WR1 and RNME_REG_VALID(to_integer(unsigned(I_ROB_RNME_REG1)));
+		FREE_RNME_REG2 <= I_ROB_REG_WR2 and RNME_REG_VALID(to_integer(unsigned(I_ROB_RNME_REG2)));
 		
 
 		process(CLK,RST)
@@ -789,9 +739,6 @@ begin
 					RNME_REG_BUSY(to_integer(unsigned(I_ROB_RNME_REG2))) <= '0';
 					RNME_REG_VALID(to_integer(unsigned(I_ROB_RNME_REG2))) <= '0';
 				end if;
-				
---				if (I_ROB_FLUSH1 = '1') then
-					
 				
 			end if;
 			

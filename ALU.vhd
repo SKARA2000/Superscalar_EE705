@@ -190,7 +190,7 @@ begin
 	Valid <= ALU_instr_control;
 	RR <= RR_inp;
 	location <= location_inp;
-	add_inp2 <= inp2 when (add_sub = '1') else (inp2 xor "11111111111111111111111111111111");	-- 2's complemetn for subtraction if necessary
+	add_inp2 <= inp2 when (add_sub = '0') else (inp2 xor "11111111111111111111111111111111");	-- 2's complemetn for subtraction if necessary
 	Adder: adder_32 port map(inp1, add_inp2, add_sub, add_outp, carr_ovfl);						-- Adder instantiation, Carry flag is set when adder has a global carry
 	
 	slt_outp <= std_logic_vector(to_unsigned(1, add_outp'length)) when (add_outp(31) = '1') else std_logic_vector(to_unsigned(0, add_outp'length));

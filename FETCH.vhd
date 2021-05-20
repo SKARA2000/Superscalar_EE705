@@ -44,7 +44,7 @@ begin
 		variable pc_loc: integer;
 		variable prediction1, prediction2: std_logic;
 	begin
-		pc_loc := to_integer(unsigned(I_PC));
+		--pc_loc := to_integer(unsigned(I_PC));
 		if (RST = '1') then
 			HIST_TABLE := (others => (others => '0'));
 			INDEX := (others => '0');
@@ -54,7 +54,6 @@ begin
 			INST2 := (others => '0');
 			pc_loc := 0;
 			
-			O_NEXT_PC <= (others => '0');
 			O_I1_HIST_IND <= (others => '0');
 			O_I2_HIST_IND <= (others => '0');
 			O_INST1 <= (others => '0');

@@ -1,14 +1,14 @@
-library ieee;
-use ieee.std_Logic_1164.all;
-
-package PKG_StoreBuf is
-	constant MemSize: integer := 32;
-	constant OprSize: integer := 32;
-	constant BufferSize: integer := 4;
-	
-	type Buffer_COL is array(0 to 2**BufferSize - 1) of std_Logic_vector((MemSize + OprSize ) downto 0);
-	
-end package PKG_StoreBuf;
+--library ieee;
+--use ieee.std_Logic_1164.all;
+--
+--package PKG_StoreBuf is
+--	constant MemSize: integer := 32;
+--	constant OprSize: integer := 32;
+--	constant BufferSize: integer := 4;
+--	
+--	type Buffer_COL is array(0 to 2**BufferSize - 1) of std_Logic_vector((MemSize + OprSize ) downto 0);
+--	
+--end package PKG_StoreBuf;
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -44,7 +44,7 @@ end entity StoreBuffer;
 
 architecture StoreBuf_Arch of StoreBuffer is
 begin
-	process(CLK)
+	process(CLK, RST)
 		variable WR, FULL: std_logic;
 		variable StoreBuff: Buffer_COL; 
 		variable index: unsigned(BufferSize - 1 downto 0);

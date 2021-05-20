@@ -182,7 +182,7 @@ begin
 
 	s_opcode <= instr(N_OPCODE_BITS + N_SHAMT_BITS + N_FUNC_BITS - 1 downto N_OPCODE_BITS + N_SHAMT_BITS + N_FUNC_BITS - 6);
 	s_func   <= instr(N_FUNC_BITS - 1 downto 0);
-	s_instr_val_next <= '1' when ( s_opcode = OPCODE_FPU and s_func = "000001" and i_instr_valid = '1') else '0' ;  
+	s_instr_val_next <= i_instr_valid ;  
 	
 	s_exp_a <= fp32_a(30 downto 23);
 	s_exp_b <= fp32_b(30 downto 23);

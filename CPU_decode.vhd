@@ -1,4 +1,16 @@
 library ieee;
+use ieee.std_Logic_1164.all;
+
+package PKG_StoreBuf is
+	constant MemSize: integer := 32;
+	constant OprSize: integer := 32;
+	constant BufferSize: integer := 4;
+	
+	type Buffer_COL is array(0 to 2**BufferSize - 1) of std_Logic_vector((MemSize + OprSize ) downto 0);
+	
+end package PKG_StoreBuf;
+
+library ieee;
 use ieee.std_logic_1164.all;
 
 package PKG_COMMON is
@@ -65,10 +77,10 @@ type TABLE is array(0 to 2**N_Br_TAG - 1) of std_logic_vector(63 downto 0);
 
 -- DTYPES FOR ROB --
 constant N_ENTRIES_ROB : integer := 128;
-type ROB_PC_COLUMN 		is array(0 to N_ENTRIES_ROB-1) of std_logic_vector(31 downto 0);
-type ROB_LOC_COLUMN 		is array(0 to N_ENTRIES_ROB-1) of std_logic_vector(N_LOG_ROB-1 downto 0);
-type ROB_BrTAG_COLUMN 	is array(0 to N_ENTRIES_ROB-1) of std_logic_vector(3 downto 0);
-type ROB_TAG_COLUMN 		is array(0 to N_ENTRIES_ROB-1) of std_logic_vector(N_LOG_RR-1 downto 0);
+type ROB_PC_COLUMN 		is array(N_ENTRIES_ROB-1 downto 0) of std_logic_vector(31 downto 0);
+type ROB_LOC_COLUMN 		is array(N_ENTRIES_ROB-1 downto 0) of std_logic_vector(N_LOG_ROB-1 downto 0);
+type ROB_BrTAG_COLUMN 	is array(N_ENTRIES_ROB-1 downto 0) of std_logic_vector(3 downto 0);
+type ROB_TAG_COLUMN 		is array(N_ENTRIES_ROB-1 downto 0) of std_logic_vector(N_LOG_RR-1 downto 0);
 
 -- Control Bits --
 	-- CTRL : ALU_instr FP_instr Mem_instr Br_instr R_type Imm_type RegWrite RegDst RegInSrc ALUSrc Add_sub Logic_ctrl alu_outp_control shift_control Fp_mul/add DataRead DataWrite BrType PCSrc 
@@ -97,65 +109,79 @@ entity	CPU is
 port (
 			 
 			 -- INPUTS TO FETCH UNIT --
-			 CLK: in std_logic;
-			 RST: in std_logic;
+			 CLK	: in std_logic;
+			 RST	: in std_logic;
 	
 			 --Code Memory; Needs to be written in PKG_COMMON
-			 I_MEM: in CODE_MEM;
-			 
-			 -- -- INPUTS FROM DECODE STAGE --
-			 -- -- opcodes, shift and functional bits --
-			 -- I_OPCODE1, I_OPCODE2 : in std_logic_vector(N_OPCODE_BITS-1 downto 0);
-			 -- I_FUNC1, I_FUNC2		 : in std_logic_vector(N_FUNC_BITS-1 downto 0);
-			 -- I_SHAMT1, I_SHAMT2   : in std_logic_vector(N_SHAMT_BITS-1 downto 0);
-			 
-			 -- -- control signals
-			 -- I_CTRL1, I_CTRL2     : in std_logic_vector(N_CTRL_BITS-1 downto 0);
-			 
-			 -- -- valid bits
-			 -- I_I1_VAL, I_I2_VAL   : in std_logic;
-			 -- -- Branch Bits
-			 -- I_I1_DECODE_BR_BITS, I_I2_DECODE_BR_BITS: in std_logic_vector(N_BR_BITS_FOR_RS - 1 downto 0);
-
-			 -- -- program counter 
-			 -- I_PC1, I_PC2 : in std_logic_vector( 31 downto 0 );
-			 
-			 -- -- ARCHITECTURAL REGISTERS --
-			 -- I_I1_REG1, I_I1_REG2 : in std_logic_vector(N_LOG_AR-1 downto 0 );
-			 -- I_I2_REG1, I_I2_REG2 : in std_logic_vector(N_LOG_AR-1 downto 0 );
-			 -- I_I1_DEST, I_I2_DEST : in std_logic_vector(N_LOG_AR-1 downto 0 );
-			 -- I_I1_IMM_OPR, I_I2_IMM_OPR : in std_logic_vector(31 downto 0); 
-			 
---			 -- INPUTS FROM REORDER BUFFER --
---			 -- 2 free locations in ROB
---			 I_ROB_FREE_LOC1, I_ROB_FREE_LOC2 : in std_logic_vector( N_LOG_ROB - 1 downto 0) ;	
---			 -- write enable signals for ARF
---			 I_ROB_REG_WR1, I_ROB_REG_WR2 : in std_logic; 
---			 -- rename reg ids 
---			 I_ROB_RNME_REG1, I_ROB_RNME_REG2 : in std_logic_vector( N_LOG_RR-1 downto 0 );
---			 -- arch reg ids 
---			 I_ROB_ARCH_REG1, I_ROB_ARCH_REG2 : in std_logic_vector( N_LOG_AR-1 downto 0 ) ;
-
+			 I_MEM	: in CODE_MEM;
+			
+			--- Outputs for Debugging --
+			----------------------------
+			----------------------------
+			-- OUTPUTS FROM FETCH --
+			O_NEXT_PC1, O_NEXT_PC2			: out std_logic_vector(31 downto 0);
+			O_I1_HIST_IND, O_I2_HIST_IND	: out std_logic_vector(N_Br_TAG - 1 downto 0);
+			O_INST1, O_INST2				: out std_logic_vector(31 downto 0);
+			O_PREDICTION1, O_PREDICTION2	: out std_logic; 
+			
+			-- OUTPUTS FROM DECODE --
+			O_OPCODE1, O_OPCODE2 				: out std_logic_vector(N_OPCODE_BITS-1 downto 0);
+			O_FUNC1, O_FUNC2 					: out std_logic_vector(N_FUNC_BITS-1 downto 0);
+			O_SHAMT1, O_SHAMT2 					: out std_logic_vector(N_SHAMT_BITS-1 downto 0);
+			O_I1_REG1, O_I1_REG2 				: out std_logic_vector(N_LOG_AR-1 downto 0 );
+			O_I2_REG1, O_I2_REG2 				: out std_logic_vector(N_LOG_AR-1 downto 0 );
+			O_I1_DEST, O_I2_DEST 				: out std_logic_vector(N_LOG_AR-1 downto 0 );
+			O_I1_DEC_Valid, O_I2_DEC_Valid 		: out std_logic;
+			O_DEC_CTRL1, O_DEC_CTRL2 			: out std_logic_vector(N_CTRL_BITS-1 downto 0);
+			speculative_bit1, speculative_bit2 	: out std_logic;
+			O_IMM1, O_IMM2						: out std_logic_vector(31 downto 0);
+			jump_valid1, jump_valid2 			: out std_logic;
+			jump_addr1, jump_addr2 				: out std_logic_vector(31 downto 0);
+			
 			-- OUTPUTS FROM DISPATCH --
 			 O_O_DS1_FPU_OPR1, O_O_DS1_FPU_OPR2 : out std_logic_vector(31 downto 0);
-			 O_O_DS1_FPU_VAL, O_O_DS1_FPU_OPR1_VAL, O_O_DS1_FPU_OPR2_VAL : out std_logic ;
+			 O_O_DS1_FPU_VAL, O_O_DS1_FPU_OPR1_VAL, O_O_DS1_FPU_OPR2_VAL : out std_logic;
 			 O_O_DS2_FPU_OPR1, O_O_DS2_FPU_OPR2 : out std_logic_vector(31 downto 0);
-			 O_O_DS2_FPU_VAL, O_O_DS2_FPU_OPR1_VAL, O_O_DS2_FPU_OPR2_VAL : out std_logic ;
-			
-			 -- OUTPUTS FROM RS --
-			 O_FPU_OPR1, O_FPU_OPR2 :out std_logic_vector(31 downto 0) ;
-			 O_RS_FPU_DEST_REG :out std_logic_vector(N_LOG_RR-1 downto 0) ;
-			 O_N_INSTR_IN_STN : out std_logic_vector(3 downto 0);
+			 O_O_DS2_FPU_VAL, O_O_DS2_FPU_OPR1_VAL, O_O_DS2_FPU_OPR2_VAL : out std_logic;
+			 O_O_DS1_ALU_OPR1, O_O_DS1_ALU_OPR2 : out std_logic_vector(31 downto 0);
+			 O_O_DS1_ALU_VAL, O_O_DS1_ALU_OPR1_VAL, O_O_DS1_ALU_OPR2_VAL : out std_logic;
+			 O_O_DS2_ALU_OPR1, O_O_DS2_ALU_OPR2 : out std_logic_vector(31 downto 0);
+			 O_O_DS2_ALU_VAL, O_O_DS2_ALU_OPR1_VAL, O_O_DS2_ALU_OPR2_VAL : out std_logic;
+			 
+			 -- OUTPUTS FROM RS for FPU --
+			 O_RS_FPU_DEST_REG 	: out std_logic_vector(N_LOG_RR-1 downto 0) ;
+			 O_RS_ALU_DEST_REG 	: out std_logic_vector(N_LOG_RR-1 downto 0) ;
+			 O_N_INSTR_IN_STN 	: out std_logic_vector(3 downto 0);
 			 
 			 -- OUTPUTS FROM FPU--
-			 O_FPU_RESULT    : out std_logic_vector(31 downto 0);
-			 O_FPU_DEST_REG  : out std_logic_vector(N_LOG_RR-1 downto 0);
-			 O_FPU_INSTR_VAL : out std_logic;
+			 O_FPU_OPR1, O_FPU_OPR2 				: out std_logic_vector(31 downto 0) ;
+			 O_FPU_RESULT    						: out std_logic_vector(31 downto 0);
+			 O_FPU_DEST_REG  						: out std_logic_vector(N_LOG_RR-1 downto 0);
+			 O_FPU_INSTR_VAL 						: out std_logic;
+			 O_FPU_ROB_LOC_OUT, O_DREG_FPU_ROB_LOC	: out std_logic_vector(N_LOG_ROB-1 downto 0) ;
+			 O_O_DS1_FPU_RR , O_O_DS2_FPU_RR 		: out std_logic_vector(N_LOG_RR-1 downto 0);
+			 
+			 -- OUTPUTS FROM ALU--
+			 O_ALU_OPR1, O_ALU_OPR2 				: out std_logic_vector(31 downto 0) ;
+			 O_ALU_RESULT    						: out std_logic_vector(31 downto 0);
+			 O_ALU_DEST_REG  						: out std_logic_vector(N_LOG_RR-1 downto 0);
+			 O_ALU_INSTR_VAL 						: out std_logic;
+			 O_ALU_ROB_LOC_OUT, O_DREG_ALU_ROB_LOC	: out std_logic_vector(N_LOG_ROB-1 downto 0) ;			 
+			 O_O_DS1_ALU_RR , O_O_DS2_ALU_RR 		: out std_logic_vector(N_LOG_RR-1 downto 0);			 
 			 
 			 -- OUTPUTS FROM BR --
-			 O_BR_RESULT    : out std_logic_vector(31 downto 0);
-			 O_BR_DEST_REG  : out std_logic_vector(N_LOG_RR-1 downto 0);
-			 O_BR_INSTR_VAL : out std_logic;			 
+			 O_BR_OPR1, O_BR_OPR2 					: out std_logic_vector(31 downto 0) ;
+			 O_BR_RESULT    						: out std_logic_vector(31 downto 0);
+			 O_BR_DEST_REG  						: out std_logic_vector(N_LOG_RR-1 downto 0);
+			 O_BR_INSTR_VAL 						: out std_logic;			 
+			 O_BR_ROB_LOC_OUT, O_DREG_BR_ROB_LOC	: out std_logic_vector(N_LOG_ROB-1 downto 0) ;			 
+			 O_O_DS1_BR_RR , O_O_DS2_BR_RR 			: out std_logic_vector(N_LOG_RR-1 downto 0);
+			 
+			 -- OUTPUTS FROM RS for MEM UNIT --
+			 O_RS_MEM_VAL		    : out std_logic;
+			 O_RS_OPR1				: out std_logic_vector(31 downto 0);
+			 O_RS_OPR2				: out std_logic_vector(31 downto 0);
+			 O_RS_OPR3				: out std_logic_vector(31 downto 0);
 			 
 			 -- OUTPUTS FROM MEMORY --
 			 O_MEM_RESULT    : out std_logic_vector(31 downto 0);
@@ -170,19 +196,19 @@ port (
 			 O_MEM_OPR3		 : out std_logic_vector(31 downto 0);
 			 
 			 -- TEMP OUTPUTS --
-			 O_TEMP_RS1_BUSY_BITS, O_TEMP_RS1_READY_BITS : out std_logic_vector(7 downto 0);
-			 O_TEMP_ROB_L1 , O_TEMP_ROB_L2 : out std_logic_vector( N_LOG_ROB-1 downto 0 ) ;
+			 O_TEMP_ROB_L1 , O_TEMP_ROB_L2 	: out std_logic_vector( N_LOG_ROB-1 downto 0 ) ;
 			 O_TEMP_ROB_WR1, O_TEMP_ROB_WR2 : out std_logic;
 			 O_TEMP_ROB_RR1, O_TEMP_ROB_RR2 : out std_logic_vector(N_LOG_RR-1 downto 0);
 			 O_TEMP_ROB_AR1, O_TEMP_ROB_AR2 : out std_logic_vector(N_LOG_AR-1 downto 0);
 
 			 -- ROB --
-			 O_ROB_HEAD : out std_logic_vector(N_LOG_ROB - 1 downto 0);
-			 O_ROB_LAST : out std_logic_vector(N_LOG_ROB - 1 downto 0);
-			 O_BRTAG, O_BRTAGLOCAL: out ROB_BrTAG_COLUMN;
-			 O_ROB_FULL, O_STORE_COMMIT: out std_logic;
-			 O_STORE_LOC_BUFF: out std_logic_vector(Buffersize - 1 downto 0);
-			 O_FLUSH, O_SPEC, O_VALID: out std_logic_vector(2**N_LOG_ROB - 1 downto 0);
+			 O_I1_VAL , O_I2_VAL 		: out std_logic ;
+			 O_ROB_HEAD 				: out std_logic_vector(N_LOG_ROB - 1 downto 0);
+			 O_ROB_LAST 				: out std_logic_vector(N_LOG_ROB - 1 downto 0);
+			 O_BRTAG					: out ROB_BrTAG_COLUMN;
+			 O_ROB_FULL, O_STORE_COMMIT	: out std_logic;
+			 O_STORE_LOC_BUFF			: out std_logic_vector(Buffersize - 1 downto 0);
+			 O_FLUSH, O_SPEC, O_VALID	: out std_logic_vector(2**N_LOG_ROB - 1 downto 0);
 			 
 			 -- DISPATCH --
 			 O_ARF 		:	out	T_ARCH_REGFILE ;
@@ -191,21 +217,20 @@ port (
 			 O_RR_BUSY  :  out std_logic_vector(N_RNME_REG-1 downto 0); 
 			 
 			 -- STORE BUFFER OUTPUTS --
-			 O_STORE_WRITE: out std_logic;
-			 O_STORE_DATA: out std_logic_vector(31 downto 0);
-			 O_STORE_MEM_ADDR: out std_logic_vector(31 downto 0);
-			 O_STOREBUFF_FREE_LOC: out std_logic_vector(Buffersize - 1 downto 0);
+			 O_STORE_WRITE			: out std_logic;
+			 O_STORE_DATA			: out std_logic_vector(31 downto 0);
+			 O_STORE_MEM_ADDR		: out std_logic_vector(31 downto 0);
+			 O_STOREBUFF_FREE_LOC	: out std_logic_vector(Buffersize - 1 downto 0);
 			 
-			 
-			 -- MISC OUTPUTS
-			 O_FPU_ROB_LOC_OUT, O_DREG_ROB_LOC, O_TEMP_DS1_FPU_ROB_LOC,O_TEMP_DS2_FPU_ROB_LOC : out std_logic_vector(N_LOG_ROB-1 downto 0) ;
-			 O_BR_ROB_LOC_OUT, O_BR_DREG_ROB_LOC, O_TEMP_DS1_BR_ROB_LOC,O_TEMP_DS2_BR_ROB_LOC : out std_logic_vector(N_LOG_ROB-1 downto 0) ;
-			 O_I1_VAL , O_I2_VAL : out std_logic ;
-			 O_O_DS1_FPU_RR , O_O_DS2_FPU_RR : out std_logic_vector(N_LOG_RR-1 downto 0);
-			 O_O_DS1_BR_RR , O_O_DS2_BR_RR : out std_logic_vector(N_LOG_RR-1 downto 0)
+			 -- RS2 outputs --
+			 O_RS2_N_RS_ALU : out std_logic_vector(N_LOC_BITS downto 0);
+			 O_RS2_ALU_ROB_LOC_IN : out std_logic_vector(N_LOG_ROB-1 downto 0);
+			 O_RS2_ALU_DEST_REG : out std_logic_vector(N_LOG_RR-1 downto 0);
+			 O_RS2_ALU_INSTR_VALID : out std_logic	;
+			 O_FLUSH1 , O_FLUSH2 : out std_logic ;
+			 O_ROB_BR_RES, O_ROB_BR_VAL: out std_Logic
 		) ;
-	
-end;
+end entity;
 
 architecture ARCH1 of CPU is
 --			 -- FORWARDED INPUTS --
@@ -247,32 +272,35 @@ end component;
 
 component decode is
 port(
-	CLK, RST: in std_logic;
-	I_PC1, I_PC2 : in std_logic_vector(31 downto 0);
-	I_I1_HIST_IND, I_I2_HIST_IND: in std_logic_vector(N_Br_TAG - 1 downto 0);
-	INSTR1, INSTR2 : in std_logic_vector(31 downto 0);
-	I_pred_bit1, I_pred_bit2 : in std_logic;
-	I_Branch_Valid : in std_logic;
-	I_Branch_Result : in std_logic;
-	I_Branch_tag : in std_logic_vector(N_Br_TAG-1 downto 0);
-	O_PC1, O_PC2 : out std_logic_vector(31 downto 0);
-	O_OPCODE1, O_OPCODE2 : out std_logic_vector(N_OPCODE_BITS-1 downto 0);
-	O_FUNC1, O_FUNC2 : out std_logic_vector(N_FUNC_BITS-1 downto 0);
-	O_SHAMT1, O_SHAMT2 : out std_logic_vector(N_SHAMT_BITS-1 downto 0);
-	O_I1_REG1, O_I1_REG2 : out std_logic_vector(N_LOG_AR-1 downto 0 );
-	O_I2_REG1, O_I2_REG2 : out std_logic_vector(N_LOG_AR-1 downto 0 );
-	O_I1_DEST, O_I2_DEST : out std_logic_vector(N_LOG_AR-1 downto 0 );
-	O_I1_Valid, O_I2_Valid : out std_logic;
-	O_CTRL1, O_CTRL2 : out std_logic_vector(N_CTRL_BITS-1 downto 0);
+	CLK, RST						: in std_logic;
+	I_PC1, I_PC2 					: in std_logic_vector(31 downto 0);
+	I_I1_HIST_IND, I_I2_HIST_IND	: in std_logic_vector(N_Br_TAG - 1 downto 0);
+	INSTR1, INSTR2 					: in std_logic_vector(31 downto 0);
+	I_pred_bit1, I_pred_bit2 		: in std_logic;
+	I_Branch_Valid 					: in std_logic;
+	I_Branch_Result 				: in std_logic;
+	I_Branch_tag 					: in std_logic_vector(N_Br_TAG-1 downto 0);
+	
+	O_PC1, O_PC2 					: out std_logic_vector(31 downto 0);
+	O_OPCODE1, O_OPCODE2 			: out std_logic_vector(N_OPCODE_BITS-1 downto 0);
+	O_FUNC1, O_FUNC2 				: out std_logic_vector(N_FUNC_BITS-1 downto 0);
+	O_SHAMT1, O_SHAMT2 				: out std_logic_vector(N_SHAMT_BITS-1 downto 0);
+	O_I1_REG1, O_I1_REG2 			: out std_logic_vector(N_LOG_AR-1 downto 0 );
+	O_I2_REG1, O_I2_REG2 			: out std_logic_vector(N_LOG_AR-1 downto 0 );
+	O_I1_DEST, O_I2_DEST 			: out std_logic_vector(N_LOG_AR-1 downto 0 );
+	O_I1_Valid, O_I2_Valid 			: out std_logic;
+	O_CTRL1, O_CTRL2 				: out std_logic_vector(N_CTRL_BITS-1 downto 0);
 	-- CTRL : ALU_instr FP_instr Mem_instr Br_instr R_type Imm_type RegWrite RegDst RegInSrc ALUSrc Add_sub Logic_ctrl alu_outp_control shift_control Fp_mul/add DataRead DataWrite BrType PCSrc 
 	--  27      1          1        1         1        1       1       1       2       2        1       1        2            3              2            1         1         1        2     2    
-	speculative_bit1, speculative_bit2 : out std_logic;
-	O_pred_bit1, O_pred_bit2 : out std_logic;
-	branch_tag1, branch_tag2: out std_logic_vector(N_Br_TAG-1 downto 0);
-	O_IMM1, O_IMM2: out std_logic_vector(31 downto 0);
-	O_I1_HIST_IND, O_I2_HIST_IND : out std_logic_vector(N_Br_TAG - 1 downto 0);
-	jump_valid1, jump_valid2 : out std_logic;
-	jump_addr1, jump_addr2 : out std_logic_vector(31 downto 0));
+	speculative_bit1, speculative_bit2 					: out std_logic;
+	O_pred_bit1, O_pred_bit2 							: out std_logic;
+	branch_tag1, branch_tag2							: out std_logic_vector(N_Br_TAG-1 downto 0);
+	O_IMM1, O_IMM2										: out std_logic_vector(31 downto 0);
+	O_I1_HIST_IND, O_I2_HIST_IND 						: out std_logic_vector(N_Br_TAG - 1 downto 0);
+	O_I1_DEC_FETCH_HIST_IND, O_I2_DEC_FETCH_HIST_IND	: out std_logic_vector(N_Br_TAG - 1 downto 0);
+	O_FETCH_DEC_pred_bit1, O_FETCH_DEC_pred_bit2		: out std_logic;	
+	jump_valid1, jump_valid2 							: out std_logic;
+	jump_addr1, jump_addr2 								: out std_logic_vector(31 downto 0));
 	
 end component;
 
@@ -297,6 +325,7 @@ component DISPATCH_STAGE is
 			 
 			 -- program counter 
 			 I_PC1, I_PC2 : in std_logic_vector( 31 downto 0 );
+			 
 			 -- ARCHITECTURAL REGISTERS --
 			 I_I1_REG1, I_I1_REG2 : in std_logic_vector(N_LOG_AR-1 downto 0 );
 			 I_I2_REG1, I_I2_REG2 : in std_logic_vector(N_LOG_AR-1 downto 0 );
@@ -326,6 +355,13 @@ component DISPATCH_STAGE is
 			 -- arch reg ids 
 			 I_ROB_ARCH_REG1, I_ROB_ARCH_REG2 : in std_logic_vector( N_LOG_AR-1 downto 0 );
 			 
+			 -- Branch info from ROB
+			 I_ROB_BR_VAL, I_BR_RES : in std_logic ;
+			 I_ROB_BR_TAG : in std_logic_vector(3 downto 0);
+			 
+			 -- Flush, Spec bits from ROB
+			 I_ROB_FLUSH1, I_ROB_FLUSH2 : in std_logic;
+
 			 -- COMMON OUTPUTS TO RESERVATION STATION --
 			 O_DS_ALL_IMM_OPR1, O_DS_ALL_IMM_OPR2 : out std_logic_vector(31 downto 0);
 			 
@@ -449,6 +485,9 @@ port (
 			TAG_FWD_SLOT1, TAG_FWD_SLOT2, TAG_FWD_SLOT3, TAG_FWD_SLOT4 : in std_logic_vector(N_TAG_BITS-1 downto 0);  
 			VAL_FWD_SLOTS : in std_logic_vector(3 downto 0);
 			
+			-- From ROB --
+			I_ROB_FLUSH, I_ROB_SPEC : in std_logic_vector(127 downto 0);
+			
 			-- Outputs
 			DREG_OPR1, DREG_OPR2, DREG_OPR3 : out std_logic_vector(31 downto 0);
 			DREG_CTRL 				: out std_logic_vector(N_CTRL_BITS-1 downto 0); 	
@@ -533,18 +572,23 @@ component ROB is
 		I_LOC_EXEC: in T_ARR4_SLV_LOC;
 		I_VAL_EXEC: in std_logic_vector(0 to 3);
 		I_OPR_EXEC: in T_ARR4_SLV32;
+		I_HIST_IND_EXEC: in std_logic_vector(N_Br_TAG - 1 downto 0);
+		I_BR_PC_EXEC: in std_logic_vector(31 downto 0);		
 		I_STORE_BUFF_IND: in std_logic_vector(BufferSize - 1 downto 0);
 		I_SW_VALID: in std_logic;		
 		
 		--Outputs to dispatch stage
 		O_ROB_FREE_LOC1, O_ROB_FREE_LOC2: out std_logic_vector(N_LOG_ROB - 1 downto 0);
 		O_ROB_REG_WR1, O_ROB_REG_WR2: out std_logic;
+		O_ROB_REG_FLUSH1, O_ROB_REG_FLUSH2: out std_logic;		
 		O_ROB_RNME_REG1, O_ROB_RNME_REG2: out std_logic_vector(N_LOG_RR - 1 downto 0);
 		O_ROB_ARCH_REG1, O_ROB_ARCH_REG2: out std_logic_vector(N_LOG_AR - 1 downto 0);
 		
 		--Outputs to Decode and Dispatch Unit
+		O_ROB_HIST_IND_EXEC: out std_logic_vector(N_Br_TAG - 1 downto 0);
+		O_ROB_BR_PC_EXEC: out std_logic_vector(31 downto 0);		
 		O_ROB_DEC_VAL, O_ROB_DEC_BR_RES: out std_logic;
-		O_ROB_DEC_TAG: out std_logic_vector(N_Br_TAG - 1 downto 0);		
+		O_ROB_DEC_TAG: out std_logic_vector(N_Br_TAG - 1 downto 0);	
 		
 		--Outputs to store buffer
 		O_STORE_COMMIT: out std_logic;
@@ -656,7 +700,6 @@ component StoreBuffer is
 		O_FREE_LOC: out std_logic_vector(BufferSize - 1 downto 0)
 	);	
 end component;
-
 			 -- COMMON OUTPUTS -- 
 signal			 O_I1 , O_I2 :  std_logic_vector(N_OPCODE_BITS+N_FUNC_BITS+N_SHAMT_BITS -1 downto 0);			 
 signal			 O_I1_CTRL, O_I2_CTRL :  std_logic_vector(N_CTRL_BITS - 1 downto 0);
@@ -830,6 +873,8 @@ signal S_STORE_COMMIT: std_logic;
 signal S_STORE_LOC_BUFF: std_logic_vector(Buffersize - 1 downto 0);
 signal S_ROB_DEC_DIS_Br_RES, S_ROB_DEC_DIS_Br_VAL: std_Logic;
 signal S_ROB_DEC_DIS_Br_TAG: std_logic_vector(N_Br_TAG - 1 downto 0);
+signal S_ROB_FETCH_BR_PC, S_CDB_ROB_BR_PC: std_logic_vector(31 downto 0);
+signal S_ROB_FETCH_HIST_IND, S_CDB_ROB_HIST_IND: std_logic_vector(N_Br_TAG - 1 downto 0);
 
 -- FETCH SIGNALS --
 signal S_DEC_FETCH_TAG_1, S_DEC_FETCH_TAG_2, S_DEC_FETCH_TAG_3: std_logic_vector(N_LOG_RR - 1 downto 0);
@@ -856,29 +901,22 @@ signal S_I1_HIST_IND, S_I2_HIST_IND: std_logic_vector(N_Br_TAG - 1 downto 0);
 signal S_DEC_FETCH_J_VAL1, S_DEC_FETCH_J_VAL2, S_I1_VAL, S_I2_VAL: std_logic;
 signal S_DEC_FETCH_J_ADDR1, S_DEC_FETCH_J_ADDR2: std_logic_vector(31 downto 0);
 signal S_I1_DECODE_BR_BITS, S_I2_DECODE_BR_BITS: std_logic_vector(N_BR_BITS_FOR_RS - 1 downto 0);
+signal S_I1_FETCH_DEC_HIST_IND, S_I2_FETCH_DEC_HIST_IND: std_logic_vector(N_Br_TAG - 1 downto 0);
+signal S_I1_FETCH_DEC_PRED_BIT, S_I2_FETCH_DEC_PRED_BIT: std_logic;
 
 -- STORE BUFFER SIGNALS --
 signal S_STOREBUFF_ENABLE: std_logic;
 signal S_STOREBUFF_ADDR, S_STOREBUFF_DATA: std_logic_vector(31 downto 0);
 
+signal DUMMY128B, S_ROB_FLUSH, S_ROB_SPEC : std_logic_vector(127 downto 0);
+signal S_ROB_REG_FLUSH1, S_ROB_REG_FLUSH2 : std_logic ;
+
 begin
-
-
- FWD_DATA_VAL <= '0' & MEM_OUT_VALID & FPU_RES_VAL & ALU_RES_VAL ;
-
- FWD_TAG(0) <= ALU_DEST_REG_OUT ;
- FWD_TAG(1) <= FPU_DEST_REG_OUT ;
- FWD_TAG(2) <= MEM_EX_OUT_DEST_REG ;
- FWD_TAG(3) <= "00000" ; 
-
- FWD_OPERAND(0) <= ALU_RESULT ;
- FWD_OPERAND(1) <= FPU_RESULT ;
- FWD_OPERAND(2) <= MEM_RD_DATA ;
- FWD_OPERAND(3) <= X"00000000" ;
  
  iFETCH: FETCH port map(
 			CLK => CLK, RST => RST,
 			MEM => I_MEM,
+			
 			-- Inputs from the Decode Stage
 			I_TAG_EXEC1 => S_DEC_FETCH_TAG_1, I_TAG_EXEC2 => S_DEC_FETCH_TAG_2,
 			I_VAL_EXEC1 => S_DEC_FETCH_VAL_1, I_VAL_EXEC2 => S_DEC_FETCH_VAL_2,
@@ -901,6 +939,15 @@ begin
 			O_HIST_TABLE => S_FETCH_HIST_TABLE
  );
  
+O_NEXT_PC1 		<= S_FETCH_DEC_PC1; 
+O_NEXT_PC2 		<= S_FETCH_DEC_PC2;
+O_I1_HIST_IND 	<= S_FETCH_DEC_HIST_IND1;
+O_I2_HIST_IND 	<= S_FETCH_DEC_HIST_IND2;
+O_INST1 		<= S_FETCH_DEC_INST1;
+O_INST2			<= S_FETCH_DEC_INST2;
+O_PREDICTION1 	<= S_FETCH_DEC_PRED1;
+O_PREDICTION2 	<= S_FETCH_DEC_PRED2;
+ 
  iDECODE: decode port map (
 			CLK => CLK, RST => RST,
 			I_PC1 => S_FETCH_DEC_PC1, I_PC2 => S_FETCH_DEC_PC2,
@@ -918,7 +965,7 @@ begin
 			O_I2_REG1 => S_I2_REG1, O_I2_REG2 => S_I2_REG2,
 			O_I1_DEST => S_I1_DEST, O_I2_DEST => S_I2_DEST,
 			O_I1_Valid => S_I1_VAL, O_I2_Valid => S_I2_VAL,
-			O_CTRL1 => S_CTRL1, O_CTRL2 => S_CTRL2,
+			O_CTRL1 => S_I1_CTRL, O_CTRL2 => S_I2_CTRL,
 -- CTRL : ALU_instr FP_instr Mem_instr Br_instr R_type Imm_type RegWrite RegDst RegInSrc ALUSrc Add_sub Logic_ctrl alu_outp_control shift_control Fp_mul/add DataRead DataWrite BrType PCSrc 
 --  27      1          1        1         1        1       1       1       2       2        1       1        2            3              2            1         1         1        2     2    
 			speculative_bit1 => S_SPEC_I1, speculative_bit2 => S_SPEC_I2,
@@ -926,23 +973,63 @@ begin
 			branch_tag1 => S_BRTAG_I1, branch_tag2 => S_BRTAG_I2,
 			O_IMM1 => S_I1_IMM_OPR, O_IMM2 => S_I2_IMM_OPR,
 			O_I1_HIST_IND => S_I1_HIST_IND, O_I2_HIST_IND => S_I2_HIST_IND,
+			O_I1_DEC_FETCH_HIST_IND => S_I1_FETCH_DEC_HIST_IND, O_I2_DEC_FETCH_HIST_IND => S_I2_FETCH_DEC_HIST_IND,
+			O_FETCH_DEC_pred_bit1 => S_I1_FETCH_DEC_PRED_BIT, O_FETCH_DEC_pred_bit2 => S_I2_FETCH_DEC_PRED_BIT,
 			jump_valid1 => S_DEC_FETCH_J_VAL1, jump_valid2 => S_DEC_FETCH_J_VAL2,
 			jump_addr1 => S_DEC_FETCH_J_ADDR1, jump_addr2 => S_DEC_FETCH_J_ADDR2
 );
 
--- Connections of decode unnit to fetch unit --
-S_DEC_FETCH_TAG_1 <= S_BRTAG_I1 & S_PRED_I1; S_DEC_FETCH_TAG_2 <= S_BRTAG_I2 & S_PRED_I2;
-S_DEC_FETCH_VAL_1 <= S_DEC_FETCH_J_VAL1; S_DEC_FETCH_VAL_2 <= S_DEC_FETCH_J_VAL2;
-S_DEC_FETCH_PC_1 <= S_DEC_FETCH_J_ADDR1; S_DEC_FETCH_PC_2 <= S_DEC_FETCH_J_ADDR2;
-S_DEC_FETCH_HIST_IND_1 <= S_I1_HIST_IND; S_DEC_FETCH_HIST_IND_2 <= S_I2_HIST_IND;
+O_OPCODE1 			<= S_OPCODE1;
+O_OPCODE2 			<= S_OPCODE2;
+O_FUNC1 			<= S_FUNC1;
+O_FUNC2 			<= S_FUNC2;
+O_SHAMT1 			<= S_SHAMT1;
+O_SHAMT2 			<= S_SHAMT2;
+O_I1_REG1 			<= S_I1_REG1;
+O_I1_REG2 			<= S_I1_REG2;				
+O_I2_REG1 			<= S_I2_REG1;
+O_I2_REG2 			<= S_I2_REG2;
+O_I1_DEST 			<= S_I1_DEST;
+O_I2_DEST 			<= S_I2_DEST;
+O_I1_DEC_Valid 		<= S_I1_VAL; 
+O_I2_DEC_Valid 		<= S_I2_VAL;
+O_DEC_CTRL1 		<= S_I1_CTRL;
+O_DEC_CTRL2 		<= S_I2_CTRL;
+speculative_bit1 	<= S_SPEC_I1;
+speculative_bit2 	<= S_SPEC_I2;
+O_IMM1 				<= S_I1_IMM_OPR;
+O_IMM2 				<= S_I2_IMM_OPR;
+jump_valid1 		<= S_DEC_FETCH_J_VAL1;
+jump_valid2 		<= S_DEC_FETCH_J_VAL2;
+jump_addr1 			<= S_DEC_FETCH_J_ADDR1;
+jump_addr2 			<= S_DEC_FETCH_J_ADDR2;
 
--- Grouping the Branch bits from Decode unit to gice to Dispatch Unit --
-S_I1_DECODE_BR_BITS <= S_SPEC_I1 & S_PRED_I1 & S_BRTAG_I1 & S_I1_HIST_IND;
-S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
+-- Connections of decode unit to fetch unit --
+S_DEC_FETCH_TAG_1 		<= S_BRTAG_I1 & S_PRED_I1; 
+S_DEC_FETCH_TAG_2 		<= S_BRTAG_I2 & S_PRED_I2;
+S_DEC_FETCH_VAL_1 		<= S_DEC_FETCH_J_VAL1; 
+S_DEC_FETCH_VAL_2 		<= S_DEC_FETCH_J_VAL2;
+S_DEC_FETCH_PC_1 		<= S_DEC_FETCH_J_ADDR1; 
+S_DEC_FETCH_PC_2 		<= S_DEC_FETCH_J_ADDR2;
+S_DEC_FETCH_HIST_IND_1 	<= S_I1_HIST_IND; 
+S_DEC_FETCH_HIST_IND_2 	<= S_I2_HIST_IND;
 
--- MISCELLANEOUS TASKS --
--- S_I1_VAL <= '1';
--- S_I2_VAL <= '1';
+-- Grouping the Branch bits from Decode unit to give to Dispatch Unit --
+S_I1_DECODE_BR_BITS <= S_SPEC_I1 & S_I1_FETCH_DEC_PRED_BIT & S_BRTAG_I1 & S_I1_FETCH_DEC_HIST_IND;
+S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_I2_FETCH_DEC_PRED_BIT & S_BRTAG_I2 & S_I2_FETCH_DEC_HIST_IND;
+
+-- Grouping the data from the forwarded slots --
+ FWD_DATA_VAL <= '0' & MEM_OUT_VALID & FPU_RES_VAL & ALU_RES_VAL ;
+
+ FWD_TAG(0) <= ALU_DEST_REG_OUT ;
+ FWD_TAG(1) <= FPU_DEST_REG_OUT ;
+ FWD_TAG(2) <= MEM_EX_OUT_DEST_REG ;
+ FWD_TAG(3) <= "00000" ; 
+
+ FWD_OPERAND(0) <= ALU_RESULT ;
+ FWD_OPERAND(1) <= FPU_RESULT ;
+ FWD_OPERAND(2) <= MEM_RD_DATA ;
+ FWD_OPERAND(3) <= X"00000000" ;
  
  DISP : DISPATCH_STAGE port map ( 
 												 CLK => CLK, RST => RST, 
@@ -952,7 +1039,7 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 												 I_FUNC1 => S_FUNC1, I_FUNC2	=> S_FUNC2 ,
 												 I_SHAMT1 => S_SHAMT1 , I_SHAMT2 => S_SHAMT2 ,
 												 -- control signals
-												 I_CTRL1 => S_CTRL1, I_CTRL2 => S_CTRL2 , 
+												 I_CTRL1 => S_I1_CTRL, I_CTRL2 => S_I2_CTRL , 
 												 -- valid bits
 												 I_I1_VAL => S_I1_VAL, I_I2_VAL => S_I2_VAL, 
 												 -- branch fields
@@ -981,24 +1068,30 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 												 -- arch reg ids 
 												 I_ROB_ARCH_REG1 	=> S_ROB_ARCH_REG1, 	I_ROB_ARCH_REG2 	=> S_ROB_ARCH_REG2,
 												 
+												 -- Branch info from ROB
+												 I_ROB_BR_VAL => S_ROB_DEC_DIS_Br_VAL, I_BR_RES => S_ROB_DEC_DIS_Br_RES,
+												 I_ROB_BR_TAG => S_ROB_DEC_DIS_Br_TAG,
+			 
+												 I_ROB_FLUSH1 => S_ROB_REG_FLUSH1, I_ROB_FLUSH2 => S_ROB_REG_FLUSH2,
+												 
 												 -- COMMON OUTPUTS TO RESERVATION STATION --
 												 O_DS_ALL_IMM_OPR1 => DS_IMM_OPR1, O_DS_ALL_IMM_OPR2 => DS_IMM_OPR2,
 												 
 												 -- OUTPUTS TO RESERVATION STATION --	
 												 -- ALU --
 												 O_DS1_ALU_OPR1 		=> O_DS1_ALU_OPR1, O_DS1_ALU_OPR2 => O_DS1_ALU_OPR2,
-												 O_DS1_ALU_VAL 		=> O_DS1_ALU_VAL, 
+												 O_DS1_ALU_VAL 			=> O_DS1_ALU_VAL, 
 												 O_DS1_ALU_OPR1_VAL 	=> O_DS1_ALU_OPR1_VAL, 
 												 O_DS1_ALU_OPR2_VAL 	=> O_DS1_ALU_OPR2_VAL ,
-												 O_DS1_ALU_ROB_LOC 	=> O_DS1_ALU_ROB_LOC ,
+												 O_DS1_ALU_ROB_LOC 		=> O_DS1_ALU_ROB_LOC ,
 												 O_DS1_ALU_INSTR 		=> O_DS1_ALU_INSTR ,
 												 O_DS1_ALU_CTRL  		=> O_DS1_ALU_CTRL ,
 												 O_DS1_ALU_RR    		=> O_DS1_ALU_RR ,
 
 												 O_DS2_ALU_OPR1 		=> O_DS2_ALU_OPR1, O_DS2_ALU_OPR2 => O_DS2_ALU_OPR2 ,
-												 O_DS2_ALU_VAL 		=> O_DS2_ALU_VAL, O_DS2_ALU_OPR1_VAL => O_DS2_ALU_OPR1_VAL, 
+												 O_DS2_ALU_VAL 			=> O_DS2_ALU_VAL, O_DS2_ALU_OPR1_VAL => O_DS2_ALU_OPR1_VAL, 
 												 O_DS2_ALU_OPR2_VAL 	=> O_DS2_ALU_OPR2_VAL ,
-												 O_DS2_ALU_ROB_LOC 	=> O_DS2_ALU_ROB_LOC , 
+												 O_DS2_ALU_ROB_LOC 		=> O_DS2_ALU_ROB_LOC , 
 												 O_DS2_ALU_INSTR 		=> O_DS2_ALU_INSTR ,
 												 O_DS2_ALU_CTRL 		=> O_DS2_ALU_CTRL ,
 												 O_DS2_ALU_RR 			=> O_DS2_ALU_RR ,
@@ -1014,7 +1107,7 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 												 O_DS1_FPU_RR    		=> O_DS1_FPU_RR ,
 												 
 												 O_DS2_FPU_OPR1 		=> O_DS2_FPU_OPR1, O_DS2_FPU_OPR2 => O_DS2_FPU_OPR2 ,
-												 O_DS2_FPU_VAL 		=> O_DS2_FPU_VAL, O_DS2_FPU_OPR1_VAL=> O_DS2_FPU_OPR1_VAL, 
+												 O_DS2_FPU_VAL 			=> O_DS2_FPU_VAL, O_DS2_FPU_OPR1_VAL=> O_DS2_FPU_OPR1_VAL, 
 												 O_DS2_FPU_OPR2_VAL 	=> O_DS2_FPU_OPR2_VAL ,
 												 O_DS2_FPU_ROB_LOC  	=> O_DS2_FPU_ROB_LOC ,
 												 O_DS2_FPU_INSTR 		=> O_DS2_FPU_INSTR ,
@@ -1033,8 +1126,8 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 												 O_DS1_BRN_RR    		=> O_DS1_BRN_RR ,
 												 
 												 O_DS2_BRN_OPR1 		=> O_DS2_BRN_OPR1, 		O_DS2_BRN_OPR2 => O_DS2_BRN_OPR2 ,
-												 O_DS2_BRN_VAL 		=> O_DS2_BRN_VAL, 		
-												 O_DS2_BRN_OPR1_VAL	=> O_DS2_BRN_OPR1_VAL, 
+												 O_DS2_BRN_VAL 			=> O_DS2_BRN_VAL, 		
+												 O_DS2_BRN_OPR1_VAL		=> O_DS2_BRN_OPR1_VAL, 
 												 O_DS2_BRN_OPR2_VAL 	=> O_DS2_BRN_OPR2_VAL ,
 												 O_DS2_BRN_ROB_LOC  	=> O_DS2_BRN_ROB_LOC ,
 												 O_DS2_BRN_INSTR 		=> O_DS2_BRN_INSTR ,
@@ -1043,21 +1136,21 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 												 
 												 -- MEM --
 												 O_DS1_MEM_OPR1 		=> O_DS1_MEM_OPR1,  		O_DS1_MEM_OPR2 => O_DS1_MEM_OPR2,
-												 O_DS1_MEM_VAL 		=> O_DS1_MEM_VAL, 
-												 O_DS1_MEM_OPR1_VAL  => O_DS1_MEM_OPR1_VAL , 
-												 O_DS1_MEM_OPR2_VAL  => O_DS1_MEM_OPR2_VAL , 
-												 O_DS1_MEM_ROB_LOC   => O_DS1_MEM_ROB_LOC ,
-												 O_DS1_MEM_INSTR 	   => O_DS1_MEM_INSTR ,
+												 O_DS1_MEM_VAL 			=> O_DS1_MEM_VAL, 
+												 O_DS1_MEM_OPR1_VAL  	=> O_DS1_MEM_OPR1_VAL , 
+												 O_DS1_MEM_OPR2_VAL  	=> O_DS1_MEM_OPR2_VAL , 
+												 O_DS1_MEM_ROB_LOC   	=> O_DS1_MEM_ROB_LOC ,
+												 O_DS1_MEM_INSTR 	   	=> O_DS1_MEM_INSTR ,
 												 O_DS1_MEM_CTRL  		=> O_DS1_MEM_CTRL ,
 												 O_DS1_MEM_RR    		=> O_DS1_MEM_RR ,
 												 
-												 O_DS2_MEM_OPR1		=> O_DS2_MEM_OPR1 , O_DS2_MEM_OPR2 => O_DS2_MEM_OPR2 ,
+												 O_DS2_MEM_OPR1			=> O_DS2_MEM_OPR1 , O_DS2_MEM_OPR2 => O_DS2_MEM_OPR2 ,
 												 O_DS2_MEM_VAL			=> O_DS2_MEM_VAL , 
-												 O_DS2_MEM_OPR1_VAL	=> O_DS2_MEM_OPR1_VAL ,
-												 O_DS2_MEM_OPR2_VAL  => O_DS2_MEM_OPR2_VAL ,
-												 O_DS2_MEM_ROB_LOC   => O_DS2_MEM_ROB_LOC ,
-												 O_DS2_MEM_INSTR 	   => O_DS2_MEM_INSTR ,
-												 O_DS2_MEM_CTRL  	   => O_DS2_MEM_CTRL ,
+												 O_DS2_MEM_OPR1_VAL		=> O_DS2_MEM_OPR1_VAL ,
+												 O_DS2_MEM_OPR2_VAL  	=> O_DS2_MEM_OPR2_VAL ,
+												 O_DS2_MEM_ROB_LOC   	=> O_DS2_MEM_ROB_LOC ,
+												 O_DS2_MEM_INSTR 	   	=> O_DS2_MEM_INSTR ,
+												 O_DS2_MEM_CTRL  	   	=> O_DS2_MEM_CTRL ,
 												 O_DS2_MEM_RR    		=> O_DS2_MEM_RR ,
 												 
 												 
@@ -1068,7 +1161,7 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 												 -- OUTPUTS TO REORDER BUFFER --
 												 O_PC1 			=> S_PC1, 			O_PC2 			=> S_PC2,												 
 												 O_I1 			=> S_I1, 			O_I2 				=> S_I2 ,
-												 O_I1_CTRL 		=> S_I1_CTRL, 		O_I2_CTRL 		=> S_I2_CTRL,
+												 --O_I1_CTRL 		=> S_ROB_I1_CTRL, 		O_I2_CTRL 		=> S_ROB_I2_CTRL,
 												 O_I1_VALID 	=> S_I1_VALID, 	O_I2_VALID 		=> S_I2_VALID ,
 												 O_I1_ARCH_REG => S_I1_ARCH_REG, O_I2_ARCH_REG 	=> S_I2_ARCH_REG,												 
 												 O_I1_RNME_REG => S_I1_RNME_REG, O_I2_RNME_REG 	=> S_I2_RNME_REG,
@@ -1111,8 +1204,27 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
  O_O_DS1_FPU_OPR1_VAL 	<= O_DS1_FPU_OPR1_VAL ;
  O_O_DS1_FPU_OPR2_VAL 	<= O_DS1_FPU_OPR2_VAL ;
  
+ O_O_DS2_ALU_OPR1 		<= O_DS2_ALU_OPR1 ;
+ O_O_DS2_ALU_OPR2 		<= O_DS2_ALU_OPR2 ;
+ O_O_DS2_ALU_VAL 			<= O_DS2_ALU_VAL;
+ O_O_DS2_ALU_OPR1_VAL 	<= O_DS2_ALU_OPR1_VAL ;
+ O_O_DS2_ALU_OPR2_VAL 	<= O_DS2_ALU_OPR2_VAL ;
+ 
+ O_O_DS1_ALU_OPR1 		<= O_DS1_ALU_OPR1 ;
+ O_O_DS1_ALU_OPR2 		<= O_DS1_ALU_OPR2 ;
+ O_O_DS1_ALU_VAL 		<= O_DS1_ALU_VAL;
+ O_O_DS1_ALU_OPR1_VAL 	<= O_DS1_ALU_OPR1_VAL ;
+ O_O_DS1_ALU_OPR2_VAL 	<= O_DS1_ALU_OPR2_VAL ; 
+ 
+ O_O_DS1_ALU_RR <= O_DS1_ALU_RR;
+ O_O_DS2_ALU_RR <= O_DS2_ALU_RR;
+ 
  O_O_DS1_FPU_RR <= O_DS1_FPU_RR ;
  O_O_DS2_FPU_RR <= O_DS2_FPU_RR ;
+ 
+ O_O_DS1_BR_RR <= O_DS1_BRN_RR;
+ O_O_DS2_BR_RR <= O_DS2_BRN_RR;
+ 
  
  FPU_DS_VAL <= '0' & O_DS2_FPU_VAL & O_DS1_FPU_VAL ;
  
@@ -1163,6 +1275,8 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 														
 														VAL_FWD_SLOTS => FWD_DATA_VAL,
 														
+														
+														I_ROB_FLUSH => S_ROB_FLUSH, I_ROB_SPEC => S_ROB_SPEC,
 --														TEMP_ISEQ3 => TEMP_ISEQ3, TEMP_ISEQ2 => TEMP_ISEQ2, 
 --														TEMP_ISEQ1 => TEMP_ISEQ1, TEMP_ISEQ0 => TEMP_ISEQ0,
 														
@@ -1181,9 +1295,8 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 --														TEMP_LOC1 => TEMP_RS1_LOC1, TEMP_LOC2 => TEMP_RS_LOC2, TEMP_RS_LOC3 => TEMP_LOC3 );
 						
 
- O_N_INSTR_IN_STN <= TEMP_RS1_N_INSTR_IN_STN ;
- O_TEMP_RS1_BUSY_BITS <= TEMP_RS1_BUSY_BITS	;
- O_TEMP_RS1_READY_BITS <= TEMP_RS1_READY_BITS ;
+ O_N_INSTR_IN_STN 		<= TEMP_RS1_N_INSTR_IN_STN ;
+ --O_FPU_INSTR_VALID      <= FPU_INSTR_VALID ;
 
  --------- 
  -- ALU --
@@ -1231,6 +1344,8 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 														
 														VAL_FWD_SLOTS => FWD_DATA_VAL,
 														
+														I_ROB_FLUSH => S_ROB_FLUSH, I_ROB_SPEC => S_ROB_SPEC,
+														
 --														TEMP_ISEQ3 => TEMP_ISEQ3, TEMP_ISEQ2 => TEMP_ISEQ2, 
 --														TEMP_ISEQ1 => TEMP_ISEQ1, TEMP_ISEQ0 => TEMP_ISEQ0,
 														
@@ -1248,18 +1363,21 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 --														TEMP_ALLOC_BITS => TEMP_RS2_ALLOC_BITS ,
 														TEMP_BUSY_BITS => TEMP_RS2_BUSY_BITS , TEMP_READY_BITS => TEMP_RS2_READY_BITS );
 --														TEMP_LOC1 => TEMP_RS2_LOC1, TEMP_LOC2 => TEMP_RS2_LOC2, TEMP_LOC3 => TEMP_RS2_LOC3 );
-
-						
-					
-	O_FPU_OPR1 <= FPU_OPR1 ;
-	O_FPU_OPR2 <= FPU_OPR2 ;
-	O_RS_FPU_DEST_REG <= FPU_DEST_REG ;
 	
+
+	 
+	 O_RS2_N_RS_ALU <= TEMP_RS2_N_INSTR_IN_STN ;
+	 O_RS2_ALU_ROB_LOC_IN <= ALU_ROB_LOC_IN ;
+	 O_RS2_ALU_DEST_REG <= ALU_DEST_REG ;
+	 O_RS2_ALU_INSTR_VALID <= ALU_INSTR_VALID;
+	 
+	 
 	 --------- 
 	 -- BRN --
 	 ---------
 	BRN_DS_VAL <= '0' & O_DS2_BRN_VAL & O_DS1_BRN_VAL ;						
-
+	DUMMY128B <= std_logic_vector(to_unsigned(0,128));
+	
 	RS_BRN: RESERVATION_STN port map 	(  	CLK => CLK, RST => RST , D_SLOT_VALID 	=> BRN_DS_VAL ,
 														
 															DS1_INSTR => O_DS1_BRN_INSTR, DS2_INSTR => O_DS2_BRN_INSTR, 
@@ -1300,6 +1418,8 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 														
 															VAL_FWD_SLOTS => FWD_DATA_VAL,
 														
+															I_ROB_FLUSH => S_ROB_FLUSH, I_ROB_SPEC => DUMMY128B,
+															
 --															TEMP_ISEQ3 => TEMP_ISEQ3, TEMP_ISEQ2 => TEMP_ISEQ2, 
 --															TEMP_ISEQ1 => TEMP_ISEQ1, TEMP_ISEQ0 => TEMP_ISEQ0,
 														
@@ -1344,52 +1464,27 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 									O_ROB_LOC  	=> FPU_ROB_LOC_OUT	
 				
 							);
-	
-
---	FPADD : fp32_add port map ( 		CLK => CLK,
---				
---												CTRL_SIG =>  FPU_CTRL, 
---												INSTR => FPU_INSTR ,
---												I_DEST_REG  => FPU_DEST_REG, 
---												I_INSTR_VALID => FPU_INSTR_VALID,
---												I_ROB_LOC => FPU_ROB_LOC_IN,
---												
---												FP32_A => FPU_OPR1, FP32_B => FPU_OPR2,
---												
---												FP_SUM => FPU_RESULT,
---												O_DEST_REG => FPU_DEST_REG_OUT,
---												O_INSTR_VALID => FPU_RES_VAL ,
---												O_ROB_LOC     => FPU_ROB_LOC_OUT
-----												temp_s_op1_sign, temp_s_op2_sign : out std_logic;
-----												temp_s_op1_exp, temp_s_op2_exp : out std_logic_vector(7 downto 0);
-----												temp_s_exp_diff  : out unsigned(8 downto 0);
-----												temp_s_op1_bin, temp_s_op2_bin		 : out std_logic_vector(49 downto 0);
-----												temp_s_op1_NZDI, temp_s_op2_NZDI : out std_logic_vector(3 downto 0) 	;
-----												temp_op2_shifted, temp_SumorDiff  : out std_logic_vector(49 downto 0); 
-----												temp_loc : out std_logic_vector(7 downto 0);
-----												temp_mantissa : out std_logic_vector(22 downto 0) \
---												);												
-
+	O_FPU_OPR1 			<= FPU_OPR1 ;
+	O_FPU_OPR2 			<= FPU_OPR2 ;
+	O_RS_FPU_DEST_REG 	<= FPU_DEST_REG ;	
 	O_FPU_RESULT 		<= FPU_RESULT	   ;
-	O_FPU_DEST_REG 	<= FPU_DEST_REG_OUT	;
+	O_FPU_DEST_REG 		<= FPU_DEST_REG_OUT	;
 	O_FPU_INSTR_VAL 	<= FPU_RES_VAL	;
-	O_FPU_ROB_LOC_OUT <= FPU_ROB_LOC_OUT ;
-	O_DREG_ROB_LOC    <= FPU_ROB_LOC_IN;
-	O_TEMP_DS1_FPU_ROB_LOC <= O_DS1_FPU_ROB_LOC;
-	O_TEMP_DS2_FPU_ROB_LOC <= O_DS2_FPU_ROB_LOC;
+	O_FPU_ROB_LOC_OUT 	<= FPU_ROB_LOC_OUT ;
+	O_DREG_FPU_ROB_LOC  <= FPU_ROB_LOC_IN;
 	
 	---------
-	-- FPU --
+	-- ALU --
 	---------	
 	iALU : ALU port map (
 									inp1 => ALU_OPR1, 
 									inp2 => ALU_OPR2, 
 									shift_amt => ALU_INSTR(10 downto 6),
 									ALU_instr_control => ALU_INSTR_VALID, 
-									logic_control => DUMMY32(1 downto 0),
-									shift_control => DUMMY32(1 downto 0),
-									alu_outp_control => DUMMY32(2 downto 0),
-									add_sub => '1',
+									logic_control => ALU_CTRL(13 downto 12),
+									shift_control => ALU_CTRL(8 downto 7),
+									alu_outp_control => ALU_CTRL(11 downto 9),
+									add_sub => ALU_CTRL(14),
 									outp => ALU_RESULT,
 									ovfl => OVERFLOW_FLG,
 									carr_ovfl => CARRY_FLAG,
@@ -1401,7 +1496,14 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 									location => ALU_ROB_LOC_OUT,
 									RR => ALU_DEST_REG_OUT
 								) ;
-
+	O_ALU_OPR1 			<= ALU_OPR1 ;
+	O_ALU_OPR2 			<= ALU_OPR2 ;
+	O_RS_ALU_DEST_REG 	<= ALU_DEST_REG ;	
+	O_ALU_RESULT 		<= ALU_RESULT	   ;
+	O_ALU_DEST_REG 		<= ALU_DEST_REG_OUT	;
+	O_ALU_INSTR_VAL 	<= ALU_RES_VAL	;
+	O_ALU_ROB_LOC_OUT 	<= ALU_ROB_LOC_OUT ;
+	O_DREG_ALU_ROB_LOC  <= ALU_ROB_LOC_IN;
 	---------
 	-- BRN --
 	---------
@@ -1409,7 +1511,13 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 	BRN_EX_BRTAG 		<= BRN_EX_BR_FIELD(7 downto 4) ;
 	BRN_EX_HIST_IND 	<= BRN_EX_BR_FIELD(3 downto 0) ;
 	
+--	O_BRN_EX_PRED  	<= BRN_EX_PRED ;
+--	O_BRN_EX_BRTAG 	<= BRN_EX_BRTAG ;
+--	O_BRN_EX_HIST_IND <= BRN_EX_HIST_IND ;
 	
+--	O_BRN_EX_PRED : out std_logic 
+--	O_BRN_EX_BRTAG, O_BRN_EX_HIST_IND : out std_logic_vector(3 downto 0);
+
 	iBRN :  BRANCH port map (
 											CLK => CLK, 			
 											
@@ -1427,27 +1535,21 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 											I_HIST_IND 	=> BRN_EX_HIST_IND ,
 											
 											--Outputs as a proper execution unit
-											O_OUT_PC		=> BRN_EX_OUT_PC ,
-											O_HIST_IND  => BRN_EX_OUT_HIST_IND ,
-											O_VAL_EXEC  => BRN_EX_OUT_VAL ,
-											O_TAG_EXEC  => BRN_EX_OUT_DEST_REG ,
-											O_LOC_EXEC  => BRN_ROB_LOC_OUT
+											O_OUT_PC		=> S_CDB_ROB_BR_PC ,
+											O_HIST_IND 	 	=> S_CDB_ROB_HIST_IND ,
+											O_VAL_EXEC  	=> BRN_EX_OUT_VAL,
+											O_TAG_EXEC  	=> BRN_EX_OUT_DEST_REG ,
+											O_LOC_EXEC  	=> BRN_ROB_LOC_OUT
 		);
-		
-	-- Connections of Branch Unit with Fetch Unit --
-	S_DEC_FETCH_TAG_3 <= BRN_EX_OUT_DEST_REG;
-	S_DEC_FETCH_VAL_3 <= BRN_EX_OUT_VAL;
-	S_DEC_FETCH_PC_3 <= BRN_EX_OUT_PC;
-	S_DEC_FETCH_HIST_IND_3 <= BRN_EX_OUT_HIST_IND;
 	
 	-- Mapping signals used for debugging
-	O_BR_RESULT <= BRN_EX_OUT_PC;
-	O_BR_DEST_REG 	<= BRN_EX_OUT_DEST_REG;
-	O_BR_INSTR_VAL 	<= BRN_EX_OUT_VAL;
-	O_BR_ROB_LOC_OUT <= BRN_ROB_LOC_OUT;
-	O_BR_DREG_ROB_LOC    <= BRN_ROB_LOC_IN;
-	O_TEMP_DS1_BR_ROB_LOC <= O_DS1_BRN_ROB_LOC;
-	O_TEMP_DS2_BR_ROB_LOC <= O_DS2_BRN_ROB_LOC;	
+	O_BR_OPR1 				<= BRN_OPR1 ;
+	O_BR_OPR2				<= BRN_OPR2 ;	
+	O_BR_RESULT 			<= BRN_EX_OUT_PC;
+	O_BR_DEST_REG 			<= BRN_EX_OUT_DEST_REG;
+	O_BR_INSTR_VAL 			<= BRN_EX_OUT_VAL;
+	O_BR_ROB_LOC_OUT 		<= BRN_ROB_LOC_OUT;
+	O_DREG_BR_ROB_LOC    	<= BRN_ROB_LOC_IN;	
 	
 	--------------
 	--- MEMORY ---
@@ -1495,6 +1597,8 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 														
 															VAL_FWD_SLOTS => FWD_DATA_VAL,
 														
+															I_ROB_FLUSH => S_ROB_FLUSH, I_ROB_SPEC => S_ROB_SPEC,
+															
 --															TEMP_ISEQ3 => TEMP_ISEQ3, TEMP_ISEQ2 => TEMP_ISEQ2, 
 --															TEMP_ISEQ1 => TEMP_ISEQ1, TEMP_ISEQ0 => TEMP_ISEQ0,
 														
@@ -1504,27 +1608,23 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 															DREG_CTRL  		=> MEM_CTRL , 	
 															DREG_BR_FIELD 	=> MEM_EX_BR_FIELD , 
 															DREG_ROB_LOC 	=> MEM_ROB_LOC_IN ,
-															DREG_DEST      => MEM_DEST_REG ,
+															DREG_DEST       => MEM_DEST_REG ,
 															RS_OUTPUT_VALID => MEM_INSTR_VALID );
-
-	--														-- TEMP OUTPUTS --
-	--														TEMP_N_INSTR_IN_STN => TEMP_RS3_N_INSTR_IN_STN , 														
-	--														TEMP_ALLOC_BITS => TEMP_RS3_ALLOC_BITS ,
-	--														TEMP_BUSY_BITS => TEMP_RS3_BUSY_BITS , TEMP_READY_BITS => TEMP_RS3_READY_BITS );
-	--														TEMP_LOC1 => TEMP_RS3_LOC1, TEMP_LOC2 => TEMP_RS3_LOC2, TEMP_LOC3 => TEMP_RS3_LOC3 );
+	
+		O_RS_MEM_VAL 	<= MEM_INSTR_VALID;
+		O_RS_OPR1 		<= MEM_OPR1;
+		O_RS_OPR2 		<= MEM_OPR2;
+		O_RS_OPR3 		<= MEM_OPR3;
 	
 		iMEM : memory port map (
 		clk => CLK,
 		rst	=> RST,
 		
-		SB_Enable => S_STOREBUFF_ENABLE,
-		SB_mem_add => S_STOREBUFF_ADDR,
-		SB_Data	=> S_STOREBUFF_DATA,
-		
---		memread 				: in std_logic;
---		memwrite 				: in std_logic;
+		SB_Enable 	=> S_STOREBUFF_ENABLE,
+		SB_mem_add 	=> S_STOREBUFF_ADDR,
+		SB_Data		=> S_STOREBUFF_DATA,
 
-		DREG_CTRL => MEM_CTRL ,
+		DREG_CTRL 			=> MEM_CTRL ,
 		DREG_DEST 			=> MEM_DEST_REG ,
 		DREG_ROB_LOC		=> MEM_ROB_LOC_IN ,
 		RS_OUTPUT_VALID     => MEM_INSTR_VALID ,
@@ -1546,22 +1646,22 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 		reg_rob_loc			=> MEM_ROB_LOC_OUT );
 		
 	-- Exposing the Memory Unit signals for Debugging --
-	O_MEM_OPR1 <= MEM_OPR1;
-	O_MEM_OPR2 <= MEM_OPR2;
-	O_MEM_OPR3 <= MEM_OPR3;
-	O_MEM_INSTR_VAL <= MEM_OUT_VALID;
-	O_MEM_DEST_REG <= MEM_EX_OUT_DEST_REG;
-	O_MEM_ROB_LOC <= MEM_ROB_LOC_OUT;
-	O_MEM_ADDR <= MEM_WR_ADDRESS;
-	O_MEM_RESULT <= MEM_RD_DATA;
-	O_IN_FREELOC <= SB_LOC_IN;
-	O_OUT_FREELOC <= SB_LOC_OUT;
+	O_MEM_OPR1 			<= MEM_OPR1;
+	O_MEM_OPR2 			<= MEM_OPR2;
+	O_MEM_OPR3 			<= MEM_OPR3;
+	O_MEM_INSTR_VAL 	<= MEM_OUT_VALID;
+	O_MEM_DEST_REG 		<= MEM_EX_OUT_DEST_REG;
+	O_MEM_ROB_LOC 		<= MEM_ROB_LOC_OUT;
+	O_MEM_ADDR 			<= MEM_WR_ADDRESS;
+	O_MEM_RESULT 		<= MEM_RD_DATA;
+	O_IN_FREELOC 		<= SB_LOC_IN;
+	O_OUT_FREELOC 		<= SB_LOC_OUT;
 	
 	-- Breaking up the Branch Bits before inserting into ROB --
-	S_I1_SPEC <= S_ROB_I1_BR_FIELD(9);
-	S_I1_BrTAG <= S_ROB_I1_BR_FIELD(7 downto 4);
-	S_I2_SPEC <= S_ROB_I2_BR_FIELD(9);
-	S_I2_BrTAG <= S_ROB_I2_BR_FIELD(7 downto 4);
+	S_I1_SPEC 	<= S_ROB_I1_BR_FIELD(9);
+	S_I1_BrTAG 	<= S_ROB_I1_BR_FIELD(7 downto 4);
+	S_I2_SPEC 	<= S_ROB_I2_BR_FIELD(9);
+	S_I2_BrTAG 	<= S_ROB_I2_BR_FIELD(7 downto 4);
 	
 	-- Grouping the Execution Unit Register Tags before feeding into ROB --
 	S_ROB_TAG_IN(0) <= ALU_DEST_REG_OUT ;
@@ -1602,18 +1702,23 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 										I_LOC_EXEC => S_ROB_LOC_IN,
 										I_VAL_EXEC => S_ROB_VAL_IN,
 										I_OPR_EXEC => S_ROB_OPR_IN,
+										I_HIST_IND_EXEC => S_CDB_ROB_HIST_IND,
+										I_BR_PC_EXEC => S_CDB_ROB_BR_PC,
 										I_STORE_BUFF_IND => SB_LOC_OUT,
 										I_SW_VALID => MEM_SW_VALID,
 										
 										--Outputs to dispatch stage
 										O_ROB_FREE_LOC1 => S_ROB_FREE_LOC1, O_ROB_FREE_LOC2 	=> S_ROB_FREE_LOC2,
 										O_ROB_REG_WR1   => S_ROB_REG_WR1, 	O_ROB_REG_WR2 		=> S_ROB_REG_WR2,
+										O_ROB_REG_FLUSH1 => S_ROB_REG_FLUSH1, O_ROB_REG_FLUSH2 => S_ROB_REG_FLUSH2,
 										O_ROB_RNME_REG1 => S_ROB_RNME_REG1, O_ROB_RNME_REG2 	=> S_ROB_RNME_REG2,
 										O_ROB_ARCH_REG1 => S_ROB_ARCH_REG1, O_ROB_ARCH_REG2 	=> S_ROB_ARCH_REG2,
 										
 										--Outputs to Decode and Dispatch Unit
-										O_ROB_DEC_VAL => S_ROB_DEC_DIS_Br_VAL, O_ROB_DEC_BR_RES => S_ROB_DEC_DIS_Br_RES,
-										O_ROB_DEC_TAG => S_ROB_DEC_DIS_Br_TAG,
+										O_ROB_HIST_IND_EXEC 	=> S_ROB_FETCH_HIST_IND,
+										O_ROB_BR_PC_EXEC 		=> S_ROB_FETCH_BR_PC,
+										O_ROB_DEC_VAL 			=> S_ROB_DEC_DIS_Br_VAL, O_ROB_DEC_BR_RES => S_ROB_DEC_DIS_Br_RES,
+										O_ROB_DEC_TAG 			=> S_ROB_DEC_DIS_Br_TAG,
 										
 										--Outputs to store buffer
 										O_STORE_COMMIT => S_STORE_COMMIT,
@@ -1626,24 +1731,38 @@ S_I2_DECODE_BR_BITS <= S_SPEC_I2 & S_PRED_I2 & S_BRTAG_I2 & S_I2_HIST_IND;
 										O_head => O_ROB_HEAD,
 										O_last => O_ROB_LAST,
 										O_BRTAG => O_BRTAG, 
-										O_FLUSH => O_FLUSH, 
-										O_SPEC => O_SPEC,
+										O_FLUSH => S_ROB_FLUSH, 
+										O_SPEC => S_ROB_SPEC,
 										O_VALID => O_VALID
 
 									);
-									
-		-- Exposing Outputs of ROB for Debugging --
-		O_TEMP_ROB_L1 	<= S_ROB_FREE_LOC1 ;
-		O_TEMP_ROB_L2 	<= S_ROB_FREE_LOC2 ;
-		O_TEMP_ROB_WR1 <= S_ROB_REG_WR1 ;
-		O_TEMP_ROB_WR2 <= S_ROB_REG_WR2 ;
-		O_TEMP_ROB_RR1 <= S_ROB_RNME_REG1;
-		O_TEMP_ROB_RR2 <= S_ROB_RNME_REG2;
-		O_TEMP_ROB_AR1 <= S_ROB_ARCH_REG1;
-		O_TEMP_ROB_AR2 <= S_ROB_ARCH_REG2;
+							
+		O_FLUSH <= S_ROB_FLUSH ;
+		O_SPEC  <= S_ROB_SPEC  ;
 		
-		O_STORE_COMMIT <= S_STORE_COMMIT;
-		O_STORE_LOC_BUFF <= S_STORE_LOC_BUFF;
+		O_FLUSH1 <= S_ROB_REG_FLUSH1;
+		O_FLUSH2 <= S_ROB_REG_FLUSH2;
+		
+		-- Connections of Branch Unit with Fetch Unit --
+		S_DEC_FETCH_TAG_3 		<= S_ROB_DEC_DIS_Br_TAG & S_ROB_DEC_DIS_Br_RES;
+		S_DEC_FETCH_VAL_3 		<= S_ROB_DEC_DIS_Br_VAL;
+		S_DEC_FETCH_PC_3 		<= S_ROB_FETCH_BR_PC;
+		S_DEC_FETCH_HIST_IND_3 	<= S_ROB_FETCH_HIST_IND;
+		
+		-- Exposing Outputs of ROB for Debugging --
+		O_ROB_BR_VAL		<= S_ROB_DEC_DIS_Br_VAL;
+		O_ROB_BR_RES		<= S_ROB_DEC_DIS_Br_RES;
+		O_TEMP_ROB_L1 		<= S_ROB_FREE_LOC1 ;
+		O_TEMP_ROB_L2 		<= S_ROB_FREE_LOC2 ;
+		O_TEMP_ROB_WR1 		<= S_ROB_REG_WR1 ;
+		O_TEMP_ROB_WR2 		<= S_ROB_REG_WR2 ;
+		O_TEMP_ROB_RR1 		<= S_ROB_RNME_REG1;
+		O_TEMP_ROB_RR2 		<= S_ROB_RNME_REG2;
+		O_TEMP_ROB_AR1 		<= S_ROB_ARCH_REG1;
+		O_TEMP_ROB_AR2 		<= S_ROB_ARCH_REG2;
+		
+		O_STORE_COMMIT 		<= S_STORE_COMMIT;
+		O_STORE_LOC_BUFF	<= S_STORE_LOC_BUFF;
 		
 	iSTOREBUFF: StoreBuffer port map(
 		CLK => CLK,
