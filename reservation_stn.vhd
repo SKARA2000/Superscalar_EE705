@@ -4,6 +4,7 @@ use ieee.std_logic_1164.all;
 package PACKAGE_DTYPES_RS_FPU is
 
 	constant N_ENTRIES_FPU_RS 	: integer := 8;
+<<<<<<< HEAD
 	constant N_CTRL_BITS 		: integer := 27;
 	constant N_TAG_BITS 	: integer := 5 ;
 	constant N_LOC_BITS  : integer := 3 ;
@@ -30,6 +31,22 @@ package PACKAGE_DTYPES_RS_FPU is
 	type t_arrData_slv is array (3 downto 0) of std_logic_vector(31 downto 0);
 	type t_arrTag_slv is array (3 downto 0) of std_logic_vector(N_TAG_BITS-1 downto 0);
 	type t_arrN_slvRr is array (0 to N_ENTRIES_FPU_RS - 1) of std_logic_vector(N_LOG_RR-1 downto 0);   
+=======
+	constant N_FUNC_BITS 		: integer := 16;
+	constant N_TAG_BITS 	: integer := 5 ;
+	constant N_LOC_BITS  : integer := 3 ;
+	
+	type t_arrN_slv32 is array(0 to N_ENTRIES_FPU_RS - 1) of std_logic_vector(31 downto 0); 
+	type t_arrN_slvN  is array(0 to N_ENTRIES_FPU_RS - 1) of std_logic_vector(N_ENTRIES_FPU_RS-1 downto 0);  
+	type t_arrN_slvC  is array(0 to N_ENTRIES_FPU_RS - 1) of std_logic_vector(N_FUNC_BITS-1 downto 0);   
+	
+	type t_arr3_slvLoc is array (0 to 2) of std_logic_vector(N_LOC_BITS downto 0);
+	
+	-- For forwarding slots
+	type t_arrData_slv is array (3 downto 0) of std_logic_vector(31 downto 0);
+	type t_arrTag_slv is array (3 downto 0) of std_logic_vector(N_TAG_BITS-1 downto 0);
+	
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 end package;
 
 library ieee;
@@ -208,6 +225,100 @@ begin
 end architecture;
 
 
+<<<<<<< HEAD
+=======
+--library ieee;
+--use ieee.std_logic_1164.all;
+--use ieee.numeric_std.all;		
+--use work.PACKAGE_DTYPES_RS_FPU.all;
+--
+--entity ALLOCATE_BLK_RS_FPU is
+--port 	 ( CLK									: in std_logic;
+--			TBL_BUSY_BITS 						: in std_logic_vector(N_ENTRIES_FPU_RS - 1 downto 0) ;
+--			D_SLOT_VALID						: in std_logic_vector(2 downto 0);
+--			
+--			TEMP_ALLOC_BITS					: out std_logic_vector(3 downto 0);
+--			STN_LOC1 , STN_LOC2, STN_LOC3 : out std_logic_vector (N_LOC_BITS downto 0) );
+--end entity;
+--
+--
+--architecture arch1 of ALLOCATE_BLK_RS_FPU is
+--
+--signal DONE1, DONE2, DONE3 : std_logic;
+--signal START, CLK_PREV : std_logic;
+--
+--
+--
+--begin
+--
+--
+--	process(CLK)
+--	variable index : unsigned(1 downto 0) := "00";
+--	variable v_stop : std_logic := '0';
+--	variable v_avlbl_slot : t_arr3_slvLoc ;
+--	variable v_nslots_reqd : unsigned(1 downto 0);
+--	variable v_stn_loc1, v_stn_loc2, v_stn_loc3 : std_logic_vector(N_LOC_BITS downto 0);
+--	begin
+--		
+--		if falling_edge(clk) then
+--			v_stop := '0';
+--			
+--			if (D_SLOT_VALID = "000") then
+--				v_nslots_reqd := "00";
+--			elsif (D_SLOT_VALID = "001") or (D_SLOT_VALID = "010") or (D_SLOT_VALID = "100") then
+--				v_nslots_reqd := "01";	
+--			elsif (D_SLOT_VALID = "011") or (D_SLOT_VALID = "101") or (D_SLOT_VALID = "110") then
+--				v_nslots_reqd := "10";	
+--			else
+--				v_nslots_reqd := "11";
+--			end if;
+--			
+--			v_avlbl_slot := (others => (others => '0'));	
+--			
+--			index := "00";	
+--			for i in 0 to N_ENTRIES_FPU_RS-1 loop
+--					if (v_stop = '0') then
+--						
+--						-- Check RS Busy bit is 0
+--						if ( TBL_BUSY_BITS(i) = '0') then
+--								v_avlbl_slot(to_integer(index)) := '1' & std_logic_vector(to_unsigned(i, N_LOC_BITS));
+--								index := index + to_unsigned(1,2);
+--						end if;		
+--						
+--						if (index = "11") then v_stop := '1' ; end if ;
+--					end if;	
+--			end loop;
+--				
+--				if ( v_nslots_reqd = "11") then
+--					v_stn_loc1 := v_avlbl_slot(0);
+--					v_stn_loc2 := v_avlbl_slot(1);
+--					v_stn_loc3 := v_avlbl_slot(2);
+--				elsif ( v_nslots_reqd = "10") then
+--					v_stn_loc1 := v_avlbl_slot(0);
+--					v_stn_loc2 := v_avlbl_slot(1);
+--					v_stn_loc3 := (others => '0');
+--				elsif ( v_nslots_reqd = "01") then
+--					v_stn_loc1 := v_avlbl_slot(0);
+--					v_stn_loc2 := (others => '0');
+--					v_stn_loc3 := (others => '0');
+--				else
+--					v_stn_loc1 := (others => '0');
+--					v_stn_loc2 := (others => '0');
+--					v_stn_loc3 := (others => '0');
+--				end if;
+--				
+--				STN_LOC1 <= v_stn_loc1;
+--				STN_LOC2 <= v_stn_loc2;
+--				STN_LOC3 <= v_stn_loc3;
+--			
+--	end if ;
+--end process;
+--	
+--
+--end architecture;
+--From Here		
+
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;		
@@ -270,6 +381,7 @@ use ieee.numeric_std.all;
 library work;
 use work.PACKAGE_DTYPES_RS_FPU.all;
 
+<<<<<<< HEAD
 entity RESERVATION_STN is
 port ( 
 			CLK, RST   		: in std_logic;
@@ -288,10 +400,20 @@ port (
 			DS1_SPEC_BrTAG_PRED, DS2_SPEC_BrTAG_PRED, DS3_SPEC_BrTAG_PRED	: in std_logic_vector(N_BR_BITS_FOR_RS-1 downto 0) ;
 			
 			-- Forwarding slots
+=======
+entity RESERVATION_STN_FPU is
+port ( 
+			CLK, RST   		: in std_logic;
+			D_SLOT_VALID 	: in std_logic_vector(2 downto 0) ;
+			DS1_OPR1, DS1_OPR2, DS2_OPR1, DS2_OPR2, DS3_OPR1, DS3_OPR2 	: in std_logic_vector(31 downto 0);
+			DS1_OPR1_VAL, DS1_OPR2_VAL, DS2_OPR1_VAL, DS2_OPR2_VAL, DS3_OPR1_VAL, DS3_OPR2_VAL : in std_logic ;
+			DS1_FUNC, DS2_FUNC, DS3_FUNC	: std_logic_vector(N_FUNC_BITS-1 downto 0);
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 			DATA_FWD_SLOT1, DATA_FWD_SLOT2, DATA_FWD_SLOT3, DATA_FWD_SLOT4 : in std_logic_vector(31 downto 0);  
 			TAG_FWD_SLOT1, TAG_FWD_SLOT2, TAG_FWD_SLOT3, TAG_FWD_SLOT4 : in std_logic_vector(N_TAG_BITS-1 downto 0);  
 			VAL_FWD_SLOTS : in std_logic_vector(3 downto 0);
 			
+<<<<<<< HEAD
 			-- From ROB --
 			I_ROB_FLUSH, I_ROB_SPEC : in std_logic_vector(127 downto 0);
 			
@@ -305,6 +427,12 @@ port (
 			
 			RS_OUTPUT_VALID      : out std_logic;	
 			
+=======
+			DREG_OPR1, DREG_OPR2 : out std_logic_vector(31 downto 0);
+			DREG_FUNC 				: out std_logic_vector(N_FUNC_BITS-1 downto 0); 	
+
+			RS_OUTPUT_VALID      : out std_logic;	
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 			-- TEMP OUTPUTS --
 			TEMP_N_INSTR_IN_STN   : out std_logic_vector(N_LOC_BITS downto 0);
 			TEMP_ALLOC_BITS : out std_logic_vector(3 downto 0); 
@@ -316,6 +444,7 @@ port (
 end entity;
 
 
+<<<<<<< HEAD
 architecture arch1 of RESERVATION_STN is 
 
 signal TBL_BUSY, TBL_READY : std_logic_vector(N_ENTRIES_FPU_RS - 1 downto 0) := (others => '0');
@@ -328,6 +457,15 @@ signal TBL_CTRL : t_arrN_slvC ;
 signal TBL_ROB_LOC : t_arrN_slvRob;
 signal TBL_BR_FIELD : t_arrN_slvBranch ;
 
+=======
+architecture arch1 of RESERVATION_STN_FPU is 
+
+signal TBL_BUSY, TBL_READY : std_logic_vector(N_ENTRIES_FPU_RS - 1 downto 0) := (others => '0');
+
+signal TBL_OPR1 : t_arrN_slv32 ;
+signal TBL_OPR2 : t_arrN_slv32 ;
+signal TBL_FUNCTIONAL : t_arrN_slvC ;
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 signal TBL_O1VL, TBL_O2VL : std_logic_vector ( N_ENTRIES_FPU_RS -1 downto 0 ); 
 signal TBL_ISEQ : t_arrN_slvN; 
 
@@ -362,9 +500,13 @@ component READ_FWD_DATA is
 end component;	
 
 signal DREG_OPR1_NEXT, DREG_OPR2_NEXT : std_logic_vector(31 downto 0);
+<<<<<<< HEAD
 signal DREG_CTRL_NEXT 				: std_logic_vector(N_CTRL_BITS-1 downto 0) ;
 
 	
+=======
+signal DREG_FUNC_NEXT 				: std_logic_vector(N_FUNC_BITS-1 downto 0) ;	
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 
  function FUNC_GET_SEQ ( N_INSTR : in UNSIGNED )
     return std_logic_vector is
@@ -450,7 +592,11 @@ signal LSB_BIT_VALID : std_logic;
 signal ROW_NEXT : std_logic_vector(N_LOC_BITS-1 downto 0);
 signal INSTR_NEXT_ROW_FROM_TBL , INSTR_NEXT_ROW : std_logic_vector(N_LOC_BITS downto 0);
 signal INSTR_RDY_DS1, INSTR_RDY_DS2, INSTR_RDY_DS3 : std_logic ;
+<<<<<<< HEAD
 signal INSTR_CTRL_NEXT : std_logic_vector( N_CTRL_BITS-1 downto 0 );
+=======
+signal INSTR_FUNC_NEXT : std_logic_vector( N_FUNC_BITS-1 downto 0 );
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 signal OPR1_NEXT, OPR2_NEXT : t_arrN_slv32 ;
 signal INSTR_OPR1_NEXT, INSTR_OPR2_NEXT : std_logic_vector(31 downto 0);
 
@@ -460,6 +606,7 @@ signal RESET_EN, SHIFT_EN : std_logic_vector(N_ENTRIES_FPU_RS-1 downto 0);
 signal TBL_ISEQ_SHIFTED, ISEQ_NEXT : t_arrN_slvN ;	
 signal SHIFT_EN_I1, SHIFT_EN_I2, SHIFT_EN_I3 : std_logic;
 signal I1_SEQ_NEXT, I2_SEQ_NEXT, I3_SEQ_NEXT : std_logic_vector(N_ENTRIES_FPU_RS-1 downto 0);
+<<<<<<< HEAD
 signal INSTR_DEST_NEXT : std_logic_vector(N_LOG_RR-1 downto 0);
 signal INSTR_NEXT : std_logic_vector(N_OPCODE_BITS+N_SHAMT_BITS+N_FUNC_BITS-1 downto 0);
 
@@ -467,6 +614,8 @@ signal INSTR_ROB_LOC_NEXT : std_logic_vector(N_LOG_ROB-1 downto 0);
 signal INSTR_BR_FIELD_NEXT   : std_logic_vector(N_BR_BITS_FOR_RS-1 downto 0) ;
 signal INSTR_OPR3_NEXT : std_logic_vector(31 downto 0);
 signal TBL_FLUSH_NEXT, TBL_ISPEC_NEXT : std_logic_vector(N_ENTRIES_FPU_RS-1 downto 0);
+=======
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 
 begin
 
@@ -608,9 +757,15 @@ begin
 	DS3_OPR1_VAL_NEXT  <= '1' when VAL_FWD_DS3_OPR1 = '1' else DS3_OPR1_VAL ;
 	DS3_OPR2_VAL_NEXT  <= '1' when VAL_FWD_DS3_OPR2 = '1' else DS3_OPR2_VAL ;
 
+<<<<<<< HEAD
 	DS1_INSTR_RDY_NEXT <= DS1_OPR1_VAL_NEXT and DS1_OPR2_VAL_NEXT and RS_ALLOC_LOC(0)(N_LOC_BITS);
 	DS2_INSTR_RDY_NEXT <= DS2_OPR1_VAL_NEXT and DS2_OPR2_VAL_NEXT and RS_ALLOC_LOC(1)(N_LOC_BITS);
 	DS3_INSTR_RDY_NEXT <= DS3_OPR1_VAL_NEXT and DS3_OPR2_VAL_NEXT and RS_ALLOC_LOC(2)(N_LOC_BITS);
+=======
+	DS1_INSTR_RDY_NEXT <= DS1_OPR1_VAL_NEXT and DS1_OPR2_VAL_NEXT ;
+	DS2_INSTR_RDY_NEXT <= DS2_OPR1_VAL_NEXT and DS2_OPR2_VAL_NEXT ;
+	DS3_INSTR_RDY_NEXT <= DS3_OPR1_VAL_NEXT and DS3_OPR2_VAL_NEXT ;
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 	
 	-- Instruction Sequence generation --
 	N0 <= N_INSTR_IN_STN ;
@@ -642,8 +797,12 @@ begin
 	
 	-- DISPATCH SELECTION --
 	g40: for j in 0 to N_ENTRIES_FPU_RS-1 generate
+<<<<<<< HEAD
 		IS_READY_AT_CLK(j) <= '1' when ( (TBL_READY(j) = '1' or TBL_READY_NEXT(j) = '1') and TBL_BUSY(j) = '1' 
 													and TBL_BR_FIELD(j)(9) = '0' and TBL_FLUSH_NEXT(j) = '0' ) else '0' ;
+=======
+		IS_READY_AT_CLK(j) <= '1' when (TBL_READY(j) = '1' or TBL_READY_NEXT(j) = '1') else '0' ;
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 	end generate;
 	
 	-- 8 LEVEL 1 ENCODERS : Selects the location of ready instruction for each bit of Instruction Sequnece
@@ -658,7 +817,10 @@ begin
 		
 	end generate;
 
+<<<<<<< HEAD
 	
+=======
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 	-- 1 LEVEL 2 ENCODER : Selects the least significant bit which is 1
 
 		INP_ENC_LEVEL2 <= TBL_LOC_B0_VAL ; 
@@ -669,6 +831,11 @@ begin
 --		TEMP_ISEQ1 <= "0000" & INSTR_NEXT_ROW;
 --		TEMP_ISEQ2 <= OPR1_NEXT(1)(7 downto 0);
 --		TEMP_ISEQ3 <= OPR2_NEXT(2)(7 downto 0);
+<<<<<<< HEAD
+=======
+
+	
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 	INSTR_NEXT_ROW_FROM_TBL <= '1' & TBL_LOC_ALL_BITS(to_integer(unsigned(LSB_BIT_NO))) when LSB_BIT_VALID = '1' else
 										(others => '0');
 	
@@ -676,6 +843,7 @@ begin
 	INSTR_RDY_DS2 <= '1' when (DS2_INSTR_RDY_NEXT = '1' and LSB_BIT_VALID = '0') else '0' ;
 	INSTR_RDY_DS3 <= '1' when (DS3_INSTR_RDY_NEXT = '1' and LSB_BIT_VALID = '0') else '0' ;
 	
+<<<<<<< HEAD
 	INSTR_NEXT_ROW <= INSTR_NEXT_ROW_FROM_TBL when ( LSB_BIT_VALID = '1' ) else
 --							RS_ALLOC_LOC(0) when ( INSTR_RDY_DS1 = '1' and  DS1_SPEC_BrTAG_PRED(9) = '0') else
 --							RS_ALLOC_LOC(1) when ( INSTR_RDY_DS2 = '1' and  DS2_SPEC_BrTAG_PRED(9) = '0') else
@@ -746,6 +914,35 @@ begin
 	end generate;
 	
 	
+=======
+	INSTR_NEXT_ROW <= INSTR_NEXT_ROW_FROM_TBL when LSB_BIT_VALID = '1' else
+							RS_ALLOC_LOC(0) when INSTR_RDY_DS1 = '1' else
+							RS_ALLOC_LOC(1) when INSTR_RDY_DS2 = '1' else
+							RS_ALLOC_LOC(2) when INSTR_RDY_DS3 = '1' else
+							(others => '0') ;
+							
+	INSTR_FUNC_NEXT <= TBL_FUNCTIONAL(to_integer(unsigned(INSTR_NEXT_ROW_FROM_TBL(N_LOC_BITS -1 downto 0)))) when (LSB_BIT_VALID = '1') else
+							 DS1_FUNC when RS_ALLOC_LOC(0)(N_LOC_BITS) = '1' else
+							 DS2_FUNC when RS_ALLOC_LOC(1)(N_LOC_BITS) = '1' else
+							 DS3_FUNC when RS_ALLOC_LOC(2)(N_LOC_BITS) = '1' else
+							 (others => '0') ;
+							 
+	INSTR_OPR1_NEXT <= OPR1_NEXT(to_integer(unsigned(INSTR_NEXT_ROW_FROM_TBL(N_LOC_BITS -1 downto 0)))) when (LSB_BIT_VALID = '1') else
+							 DS1_OPR1_NEXT when DS1_INSTR_RDY_NEXT = '1' else
+							 DS2_OPR1_NEXT when DS2_INSTR_RDY_NEXT = '1' else
+							 DS3_OPR1_NEXT when DS3_INSTR_RDY_NEXT = '1' else
+							 (others => '0') ;
+							 
+	INSTR_OPR2_NEXT <= OPR2_NEXT(to_integer(unsigned(INSTR_NEXT_ROW_FROM_TBL(N_LOC_BITS -1 downto 0)))) when (LSB_BIT_VALID = '1') else
+							 DS1_OPR2_NEXT when DS1_INSTR_RDY_NEXT = '1' else
+							 DS2_OPR2_NEXT when DS2_INSTR_RDY_NEXT = '1' else
+							 DS3_OPR2_NEXT when DS3_INSTR_RDY_NEXT = '1' else
+							 (others => '0') ;
+							 
+
+	-- END OF DISPATCH SELECTION --	
+
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 	-- SHIFTING INSTRUCTION SEQUENCE FOR NEXT CYCLE --
 	INST_VALID <=	INSTR_NEXT_ROW(N_LOC_BITS) ;
 	
@@ -797,7 +994,11 @@ begin
 	variable v_instr_exec , v_flag_dispatch: std_logic := '0';
 	variable v_instr_loc_next : std_logic_vector(N_LOC_BITS downto 0);
 	variable v_opr1_next , v_opr2_next : std_logic_vector(31 downto 0);
+<<<<<<< HEAD
 
+=======
+	variable v_FUNC_next : std_logic_vector(N_FUNC_BITS-1 downto 0);
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 	variable v_iseq, v_iseq_next : t_arrN_slvN ;
 	variable v_iseq1, v_iseq2, v_iseq3 : std_logic_vector(N_ENTRIES_FPU_RS-1 downto 0);
 	variable v_n_instr_after_alloc : std_logic_vector(N_LOC_BITS downto 0);
@@ -809,12 +1010,38 @@ begin
 			TBL_READY <= std_logic_vector(to_unsigned(0, N_ENTRIES_FPU_RS));
 			TBL_O1VL <= std_logic_vector(to_unsigned(0, N_ENTRIES_FPU_RS));
 			TBL_O2VL <= std_logic_vector(to_unsigned(0, N_ENTRIES_FPU_RS));
+<<<<<<< HEAD
 			TBL_ROB_LOC <= (others => (others => '0'));
+=======
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 			TBL_ISEQ <= (others => (others => '0'));
 			v_iseq := (others => (others => '0'));
 		elsif rising_edge(clk) then
 		
+<<<<<<< HEAD
 
+=======
+			-- Update Table for old instructions if data is available
+--			for j in 0 to N_ENTRIES_FPU_RS-1 loop
+--				if (TBL_BUSY(j) = '1') then
+--					val_opr1 := TBL_O1VL(j);
+--					val_opr2 := TBL_O2VL(j);
+--					if (TBL_O1VL(j) = '0' and OPR1_VAL_COPY(j) = '1' ) then
+--							TBL_OPR1(j) <= OPR1_TO_COPY(j);
+--							TBL_O1VL(j) <= '1';
+--							val_opr1 := '1';		
+--					end if;
+--					if (TBL_O2VL(j) = '0' and OPR2_VAL_COPY(j) = '1' ) then
+--							TBL_OPR2(j) <= OPR2_TO_COPY(j);
+--							TBL_O2VL(j) <= '1';
+--							val_opr2 := '1';
+--					end if;
+--					
+--					TBL_READY(j) <= val_opr1 and val_opr2;
+--				end if;	
+--			end loop;
+------			
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 			for j in 0 to N_ENTRIES_FPU_RS-1 loop
 				if ( OPR1_LOAD_EN(j) = '1' ) then
 					TBL_OPR1(j) <= OPR1_TO_COPY(j);
@@ -830,6 +1057,7 @@ begin
 					TBL_READY(j) <= TBL_READY_NEXT(j);
 				end if;
 			end loop;	
+<<<<<<< HEAD
 		
 			n_instr1 := unsigned(N3) ;
 			
@@ -847,11 +1075,36 @@ begin
 				TBL_BR_FIELD(j)(9) <= TBL_ISPEC_NEXT(j) ;
 			end loop;
 			
+=======
+
+--				v_zeros :=  std_logic_vector(to_unsigned(0, N_LOC_BITS));
+--
+--				n_instr1 := 	unsigned(N_INSTR_IN_STN);
+--				n_instr2 := 	n_instr1 + unsigned( v_zeros & RS_ALLOC_LOC(0)(N_LOC_BITS));
+--				n_instr3 :=    n_instr2 + unsigned( v_zeros & RS_ALLOC_LOC(1)(N_LOC_BITS)) ;
+--				n_instr4 :=    n_instr3 + unsigned( v_zeros & RS_ALLOC_LOC(2)(N_LOC_BITS)) ;
+--
+--				if (RS_ALLOC_LOC(0)(N_LOC_BITS) = '1') then
+--					v_iseq1 := FUNC_GET_SEQ (n_instr1) ;
+--				end if;		
+--
+--				if (RS_ALLOC_LOC(1)(N_LOC_BITS) = '1') then
+--					v_iseq2 := FUNC_GET_SEQ (n_instr2) ;
+--				end if;		
+--						
+--				if (RS_ALLOC_LOC(2)(N_LOC_BITS) = '1') then
+--					v_iseq3 := FUNC_GET_SEQ (n_instr3) ;
+--				end if;
+--				
+--				v_n_instr_after_alloc := std_logic_vector(n_instr4);			
+
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 			-- Update Table for new instructions
 			if (RS_ALLOC_LOC(0)(N_LOC_BITS) = '1') then
 			
 					iloc := to_integer(unsigned(RS_ALLOC_LOC(0)(N_LOC_BITS-1 downto 0)));
 					
+<<<<<<< HEAD
 					TBL_INSTR(iloc) 		<= DS1_INSTR; 
 					TBL_DEST(iloc)  		<= DS1_DEST; 
 					TBL_CTRL(iloc)  		<= DS1_CTRL; 
@@ -872,12 +1125,29 @@ begin
 					
 					v_iseq(iloc) := I1_SEQ;
 					TBL_ISEQ(iloc)  		<= I1_SEQ;
+=======
+					TBL_FUNCTIONAL(iloc) <= DS1_FUNC; 
+					
+					TBL_OPR1(iloc) <= DS1_OPR1_NEXT;
+					TBL_OPR2(iloc) <= DS1_OPR2_NEXT;
+					
+					TBL_BUSY(iloc)  <= '1';
+					
+					TBL_O1VL(iloc)  <= DS1_OPR1_VAL_NEXT;
+					TBL_O2VL(iloc)  <= DS1_OPR2_VAL_NEXT;
+					
+					TBL_READY(iloc) <= DS1_INSTR_RDY_NEXT ;
+					
+					v_iseq(iloc) := I1_SEQ;
+					TBL_ISEQ(iloc)  <= I1_SEQ;
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 			end if;		
 	
 			if (RS_ALLOC_LOC(1)(N_LOC_BITS) = '1') then
 			
 					iloc := to_integer(unsigned(RS_ALLOC_LOC(1)(N_LOC_BITS-1 downto 0)));
 					
+<<<<<<< HEAD
 					TBL_INSTR(iloc) 		<= DS2_INSTR; 
 					TBL_DEST(iloc)  		<= DS2_DEST; 
 					TBL_CTRL(iloc)  		<= DS2_CTRL;
@@ -896,6 +1166,21 @@ begin
 					TBL_READY(iloc) 		<= DS2_INSTR_RDY_NEXT ;
 					
 					TBL_ISEQ(iloc)  		<= I2_SEQ;
+=======
+					TBL_FUNCTIONAL(iloc) <= DS2_FUNC;
+					
+					TBL_OPR1(iloc) <= DS2_OPR1_NEXT;
+					TBL_OPR2(iloc) <= DS2_OPR2_NEXT;
+					
+					TBL_BUSY(iloc)  <= '1';
+					
+					TBL_O1VL(iloc)  <= DS2_OPR1_VAL_NEXT;
+					TBL_O2VL(iloc)  <= DS2_OPR2_VAL_NEXT;
+					
+					TBL_READY(iloc) <= DS2_INSTR_RDY_NEXT ;
+					
+					TBL_ISEQ(iloc)  <= I2_SEQ;
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 					v_iseq(iloc) := I2_SEQ;
 			end if;		
 			
@@ -903,6 +1188,7 @@ begin
 			
 					iloc := to_integer(unsigned(RS_ALLOC_LOC(2)(N_LOC_BITS-1 downto 0)));
 					
+<<<<<<< HEAD
 					TBL_INSTR(iloc) 		<= DS3_INSTR; 
 					TBL_DEST(iloc)  		<= DS3_DEST; 
 					TBL_CTRL(iloc)  		<= DS3_CTRL;
@@ -961,6 +1247,155 @@ begin
 		
 
 
+=======
+					TBL_FUNCTIONAL(iloc) <= DS3_FUNC;
+					
+					TBL_OPR1(iloc) <= DS3_OPR1_NEXT;
+					TBL_OPR2(iloc) <= DS3_OPR2_NEXT;
+					
+					TBL_BUSY(iloc)  <= '1';
+					
+					TBL_O1VL(iloc)  <= DS3_OPR1_VAL_NEXT;
+					TBL_O2VL(iloc)  <= DS3_OPR2_VAL_NEXT;
+					
+					TBL_READY(iloc) <= DS3_INSTR_RDY_NEXT ;
+					
+					TBL_ISEQ(iloc)  <= I3_SEQ;
+					v_iseq(iloc) := I3_SEQ;
+			end if;
+			
+			if (INST_VALID = '1') then
+				TBL_BUSY(to_integer(unsigned(INSTR_NEXT_ROW(N_LOC_BITS-1 downto 0)))) <= '0';
+				TBL_READY(to_integer(unsigned(INSTR_NEXT_ROW(N_LOC_BITS-1 downto 0)))) <= '0';
+				
+				DREG_OPR1 <= INSTR_OPR1_NEXT;
+				DREG_OPR2 <= INSTR_OPR2_NEXT;
+				DREG_FUNC <= INSTR_FUNC_NEXT;
+		
+				for i in 0 to N_ENTRIES_FPU_RS-1 loop
+					TBL_ISEQ(i) <= ISEQ_NEXT(i);
+				end loop;
+				
+				--TBL_ISEQ(to_integer(unsigned(INSTR_NEXT_ROW(N_LOC_BITS-1 downto 0)))) <= (others => '0');
+				N_INSTR_IN_STN <= std_logic_vector(unsigned(N3) - to_unsigned(1, N_LOC_BITS+1));
+				
+			end if;
+		
+--			-- Dispath Instruction and Free Reservation Station
+--			-- DISPATCH PATH --
+--			v_instr_loc_next := (others => '0');
+--			v_flag_dispatch := '0';
+--			
+--			for i in 0 to N_ENTRIES_FPU_RS-1 loop
+--				for j in 0 to N_ENTRIES_FPU_RS-1 loop
+--					if (v_iseq(j)(i) = '1') and (v_flag_dispatch = '0') then 
+--						if (TBL_READY(j) = '1') then
+--							v_instr_loc_next := '1' & std_logic_vector(to_unsigned(j, N_LOC_BITS));
+--							v_opr1_next := TBL_OPR1(j);
+--							v_opr2_next := TBL_OPR2(j);
+--							v_FUNC_next := TBL_FUNCTIONAL(j) ;
+--							v_flag_dispatch := '1';
+--							
+--						else 
+--							if ( OPR1_LOAD_EN(j) = '1' ) and ( OPR2_LOAD_EN(i) = '1' ) then
+--								v_instr_loc_next := '1' & std_logic_vector(to_unsigned(j, N_LOC_BITS));
+--								v_opr1_next := OPR1_TO_COPY(j);
+--								v_opr2_next := OPR2_TO_COPY(j);
+--								v_FUNC_next := TBL_FUNCTIONAL(j) ;
+--								v_flag_dispatch := '1';
+--								
+--							elsif ( OPR1_LOAD_EN(j) = '1' ) and (TBL_O2VL(j) = '1') then	
+--								v_instr_loc_next := '1' & std_logic_vector(to_unsigned(j, N_LOC_BITS));
+--								v_opr1_next 	  := OPR1_TO_COPY(j);
+--								v_opr2_next := TBL_OPR2(j);
+--								v_FUNC_next := TBL_FUNCTIONAL(j) ;
+--								v_flag_dispatch := '1';
+--								
+--							elsif	( OPR2_LOAD_EN(j) = '1' ) and (TBL_O1VL(j) = '1') then	
+--								v_instr_loc_next := '1' & std_logic_vector(to_unsigned(j, N_LOC_BITS));
+--								v_opr1_next 	  := TBL_OPR1(j);
+--								v_opr2_next 	  := OPR2_TO_COPY(j);
+--								v_FUNC_next 	  := TBL_FUNCTIONAL(j) ;
+--								v_flag_dispatch := '1';
+--								
+--							end if;	
+--						end if;
+--					end if;	
+--				end loop;
+--			end loop;
+--			
+--			-- DISPATCH UNIT --
+--			v_instr_exec := '0';
+--			
+--			if (v_instr_loc_next(N_LOC_BITS) = '1') then
+--			
+--					TBL_BUSY(to_integer(unsigned(v_instr_loc_next(N_LOC_BITS -1 downto 0)))) <= '0';
+--					TBL_READY(to_integer(unsigned(v_instr_loc_next(N_LOC_BITS -1 downto 0)))) <= '0';
+--					
+--					v_iseq(to_integer(unsigned(v_instr_loc_next(N_LOC_BITS -1 downto 0)))) := (others => '0');
+--					DREG_OPR1 <= v_opr1_next;
+--					DREG_OPR2 <= v_opr2_next;
+--					DREG_FUNC <= v_FUNC_next;
+--
+--					v_instr_exec := '1';
+--			
+--			elsif (RS_ALLOC_LOC(0)(N_LOC_BITS) = '1') and (DS1_INSTR_RDY_NEXT = '1') then			
+--					
+--					TBL_BUSY(to_integer(unsigned(RS_ALLOC_LOC(0)(N_LOC_BITS-1 downto 0)))) <= '0';
+--					TBL_READY(to_integer(unsigned(RS_ALLOC_LOC(0)(N_LOC_BITS-1 downto 0)))) <= '0';
+--					
+--					v_iseq(to_integer(unsigned(RS_ALLOC_LOC(0)(N_LOC_BITS -1 downto 0)))) := (others => '0');
+--					
+--					DREG_OPR1 <= DS1_OPR1_NEXT;
+--					DREG_OPR2 <= DS1_OPR2_NEXT;
+--					DREG_FUNC <= DS1_FUNC;
+--
+--					v_instr_exec := '1';	
+--					
+--			elsif (RS_ALLOC_LOC(1)(N_LOC_BITS) = '1') and (DS2_INSTR_RDY_NEXT = '1') then			
+--					
+--					TBL_BUSY(to_integer(unsigned(RS_ALLOC_LOC(1)(N_LOC_BITS-1 downto 0)))) <= '0';
+--					TBL_READY(to_integer(unsigned(RS_ALLOC_LOC(1)(N_LOC_BITS-1 downto 0)))) <= '0';
+--					
+--					v_iseq(to_integer(unsigned(RS_ALLOC_LOC(1)(N_LOC_BITS -1 downto 0)))) := (others => '0');
+--					
+--					DREG_OPR1 <= DS2_OPR1_NEXT;
+--					DREG_OPR2 <= DS2_OPR2_NEXT;
+--					DREG_FUNC <= DS2_FUNC;
+--
+--					v_instr_exec := '1';					
+--
+--			elsif (RS_ALLOC_LOC(2)(N_LOC_BITS) = '1') and (DS3_INSTR_RDY_NEXT = '1') then			
+--					
+--					TBL_BUSY(to_integer(unsigned(RS_ALLOC_LOC(2)(N_LOC_BITS-1 downto 0)))) <= '0';
+--					TBL_READY(to_integer(unsigned(RS_ALLOC_LOC(2)(N_LOC_BITS-1 downto 0)))) <= '0';
+--					
+--					v_iseq(to_integer(unsigned(RS_ALLOC_LOC(2)(N_LOC_BITS -1 downto 0)))) := (others => '0');
+--					
+--					DREG_OPR1 <= DS3_OPR1_NEXT;
+--					DREG_OPR2 <= DS3_OPR2_NEXT;
+--					DREG_FUNC <= DS3_FUNC;
+--
+--
+--					v_instr_exec := '1';					
+--			end if;
+--
+--			
+--			if ( v_instr_exec	= '1') then
+--				for i in 0 to N_ENTRIES_FPU_RS-1 loop
+--					if (v_iseq(i)(0) /= '1' ) then
+--						v_iseq_next(i)(N_ENTRIES_FPU_RS - 1) := '0' ;
+--						v_iseq_next(i)(N_ENTRIES_FPU_RS - 2 downto 0) := v_iseq(i)(N_ENTRIES_FPU_RS-1 downto 1);
+--					else
+--						v_iseq_next(i) := v_iseq(i);
+--					end if;	
+--					v_iseq(i) := v_iseq_next(i);
+--				end loop;
+--				--N_INSTR_IN_STN <= std_logic_vector(unsigned(v_n_instr_after_alloc) - to_unsigned(1, N_LOC_BITS+1));			
+--				N_INSTR_IN_STN <= std_logic_vector(unsigned(N3) - to_unsigned(1, N_LOC_BITS+1));
+--			end if;			
+		RS_OUTPUT_VALID <= INST_VALID;
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 		end if;
 		
 
@@ -975,7 +1410,11 @@ begin
 				
 --				DREG_OPR1 <= INSTR_OPR1_NEXT;
 --				DREG_OPR2 <= INSTR_OPR2_NEXT;
+<<<<<<< HEAD
 --				DREG_CTRL <= INSTR_CTRL_NEXT;
+=======
+--				DREG_FUNC <= INSTR_FUNC_NEXT;
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 
 				
 --		TEMP_ISEQ0 <= TBL_ISEQ(0);

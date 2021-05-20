@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+<<<<<<< HEAD
 
 package PKG_EX_FPU is
 
@@ -40,10 +41,14 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.PKG_EX_FPU.all;
+=======
+use ieee.numeric_std.all;
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 
 entity fp32_add is
 	port ( 
 				CLK : in std_logic;
+<<<<<<< HEAD
 				
 				ctrl_sig  : in std_logic_vector(N_CTRL_BITS-1 downto 0);
 				
@@ -60,6 +65,10 @@ entity fp32_add is
 				o_dest_reg 		: out std_logic_vector(N_LOG_RR-1 downto 0);
 				o_rob_loc  		: out std_logic_vector(N_LOG_ROB-1 downto 0);
 				
+=======
+				fp32_a , fp32_b : in std_logic_vector (31 downto 0);
+				fp_sum : out std_logic_vector (31 downto 0); 
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 				temp_s_op1_sign, temp_s_op2_sign : out std_logic;
 				temp_s_op1_exp, temp_s_op2_exp : out std_logic_vector(7 downto 0);
 				temp_s_exp_diff  : out unsigned(8 downto 0);
@@ -89,11 +98,14 @@ signal reg12_op1_NZDI, reg12_op2_NZDI : std_logic_vector(3 downto 0);
 signal reg12_exp_diff : unsigned(8 downto 0);
 signal reg12_osign_op : std_logic_vector(1 downto 0);
 signal reg12_a_eq_b : std_logic;
+<<<<<<< HEAD
 signal reg12_rob_loc : std_logic_vector(N_LOG_ROB-1 downto 0);
 
 signal reg12_instr_valid : std_logic;
 signal reg12_dest_reg : std_logic_vector(N_LOG_RR-1 downto 0);
 
+=======
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 signal s_op1_sign, s_op2_sign : std_logic;
 signal s_op1_exp, s_op2_exp : std_logic_vector(7 downto 0);
 signal s_exp_a, s_exp_b : std_logic_vector(7 downto 0);
@@ -108,9 +120,13 @@ signal s_exp_diff : unsigned(8 downto 0);
 signal s_diff : std_logic_vector(8 downto 0);
 signal s_fsign_op : std_logic_vector(1 downto 0);
 signal s_op_a_bin_26b, s_op_b_bin_26b : std_logic_vector(25 downto 0);
+<<<<<<< HEAD
 signal s_opcode : std_logic_vector(N_OPCODE_BITS-1 downto 0);
 signal s_func   : std_logic_vector(N_FUNC_BITS-1 downto 0);
 signal s_instr_val_next : std_logic ;
+=======
+
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 --CYCLE 2 OF 3
 
 component shift_n_wrap is
@@ -126,6 +142,7 @@ signal reg23_SumorDiff : std_logic_vector(NUM_BITS_OP-1 downto 0);
 signal reg23_op1_NZDI, reg23_op2_NZDI : std_logic_vector(3 downto 0);
 signal reg23_osign_op : std_logic_vector(1 downto 0);
 signal reg23_op1_exp , reg23_op2_exp : std_logic_vector(7 downto 0);	
+<<<<<<< HEAD
 signal reg23_instr_valid : std_logic;
 signal reg23_dest_reg : std_logic_vector(N_LOG_RR-1 downto 0);
 signal reg23_rob_loc : std_logic_vector(N_LOG_ROB-1 downto 0);
@@ -134,13 +151,21 @@ signal s_op2_shifted, s_SumorDiff, s_SumOrDiff_adder : std_logic_vector(NUM_BITS
 
 
 
+=======
+
+signal s_op2_shifted, s_SumorDiff, s_SumOrDiff_adder : std_logic_vector(NUM_BITS_OP-1 downto 0);
+
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 --CYCLE 3 OF 3 --
 constant INF : integer := 0;
 constant DEN : integer := 1;
 constant ZER : integer := 2;
 constant NAN : integer := 3;
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 signal s_Result : std_logic_vector(31 downto 0);
 
 component get_mantissa is
@@ -156,8 +181,11 @@ signal s_loc : std_logic_vector(7 downto 0);
 signal s_mantissa : std_logic_vector(22 downto 0);
 
 begin
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 	-- CYCLE 1 OF 3 --
 	process (CLK)
 	begin
@@ -172,6 +200,7 @@ begin
          reg12_op1_NZDI <= s_op1_NZDI;
          reg12_op2_NZDI <= s_op2_NZDI;
 			reg12_osign_op <= s_fsign_op; 
+<<<<<<< HEAD
 			
 			reg12_instr_valid <= s_instr_val_next ;
 			reg12_dest_reg    <= i_dest_reg ;
@@ -184,6 +213,11 @@ begin
 	s_func   <= instr(N_FUNC_BITS - 1 downto 0);
 	s_instr_val_next <= i_instr_valid ;  
 	
+=======
+		end if;
+	end process;
+	
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 	s_exp_a <= fp32_a(30 downto 23);
 	s_exp_b <= fp32_b(30 downto 23);
 	s_mnt_a <= fp32_a(22 downto 0);
@@ -346,6 +380,7 @@ begin
          reg23_op1_NZDI <= reg12_op1_NZDI;
          reg23_op2_NZDI <= reg12_op2_NZDI;
 			reg23_osign_op <= reg12_osign_op; 
+<<<<<<< HEAD
 			
 			reg23_instr_valid <= reg12_instr_valid ;
 			reg23_dest_reg    <= reg12_dest_reg ;
@@ -353,6 +388,9 @@ begin
 			o_instr_valid 		<= reg12_instr_valid ;			
 		end if;
 
+=======
+		end if;
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 	end process;	
 	
 	-- CYCLE 3 OF 3 --
@@ -448,9 +486,13 @@ begin
 	end process;
 	
 	fp_sum <= s_Result;
+<<<<<<< HEAD
 	o_dest_reg <= reg23_dest_reg ;
 --	o_instr_valid <= reg23_instr_valid ;
 	o_rob_loc     <= reg23_rob_loc ;
+=======
+	
+>>>>>>> 76a393e8bb939fd57d775ef3f7f4b8887f9eead0
 end architecture;
 
 
