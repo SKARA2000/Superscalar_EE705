@@ -34,7 +34,7 @@ if __name__ == "__main__":
     # FPU Program
 
     # Branch Program
-    # f.write(inst_code("add", 1, 2, 0, 0))
+    # f.write(inst_code("add", 1, 2, 0, 0)) 
     # f.write(inst_code("beq", 3, 3, 1, 4))
     # f.write(inst_code("addi", 3, 2, 1, 30))
     # f.write(inst_code("and", 1, 2, 4, 0))
@@ -49,10 +49,10 @@ if __name__ == "__main__":
     # f.write(inst_code("fpadd", 5, 1, 3, 0))
     # f.write(inst_code("fpadd", 3, 2, 4, 0))
 
-    # f.write(inst_code("and", 1, 2, 0, 0))
-    # f.write(inst_code("addi", 3, 3, 1, 48))
-    # f.write(inst_code("xor", 3, 2, 1, 1))
-    # f.write(inst_code("beq", 2, 2, 1, 1))
+    f.write(inst_code("and", 1, 2, 0, 0))
+    f.write(inst_code("addi", 3, 3, 1, 48))
+    f.write(inst_code("xor", 3, 2, 1, 1))
+    f.write(inst_code("beq", 2, 2, 1, 1))
 
     # Memory Access Program
     # f.write(inst_code("add", 1, 2, 3, 0))

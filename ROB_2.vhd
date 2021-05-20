@@ -86,7 +86,6 @@ begin
 	
 		-- ROB table/queue pointers
 		variable head, last: std_logic_vector(N_LOG_ROB - 1 downto 0) := (others => '0');
-		variable beg: std_logic;
 		
 		variable FULL: std_logic;
 	
@@ -259,7 +258,7 @@ begin
 				-- with tags greater than the corresponding branch tag
 				if(temp_opr_br(0) = '0')  then
 					for j in 0 to (2**N_LOG_ROB - 1) loop
-						if(to_integer(temp_brTag) = to_integer(unsigned(temp_opr_br(4 downto 1)))) then
+						if(to_integer(temp_brTag) >= to_integer(unsigned(temp_opr_br(4 downto 1)))) then
 							FLUSH(j) := '1';
 						end if;
 					end loop;

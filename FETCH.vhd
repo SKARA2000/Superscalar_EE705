@@ -17,7 +17,7 @@ entity FETCH is
 		I_PC_EXEC1, I_PC_EXEC2: in std_logic_vector(31 downto 0); 
 		I_HIST_IND_EXEC1, I_HIST_IND_EXEC2: in std_logic_vector(N_Br_TAG - 1 downto 0);
 		
-		-- Inputs from the Branch Execution Unit
+		-- Inputs from the ROB
 		I_TAG_EXEC3: in std_logic_vector(N_LOG_RR - 1 downto 0);
 		I_VAL_EXEC3: in std_logic;
 		I_PC_EXEC3: in std_logic_vector(31 downto 0); 
@@ -39,7 +39,6 @@ begin
 	process(CLK)
 		variable HIST_TABLE: TABLE;
 		variable INDEX: std_logic_vector(N_Br_TAG - 1 downto 0);
-		variable spec_bit: std_logic;
 		variable INST1, INST2: std_logic_vector(31 downto 0);
 		variable pc_loc: integer;
 		variable prediction1, prediction2: std_logic;
@@ -49,7 +48,6 @@ begin
 			HIST_TABLE := (others => (others => '0'));
 			INDEX := (others => '0');
 			
-			spec_bit := '0';
 			INST1 := (others => '0');
 			INST2 := (others => '0');
 			pc_loc := 0;
